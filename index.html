@@ -104,6 +104,48 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:14px;margin-top:
 .pwrbox .cap,.ctlcap{font-size:11px;color:var(--dim);letter-spacing:.06em;margin:0 0 6px}
 .seg.vsel{width:auto;flex:0 0 auto}
 .seg.vsel button{padding:5px 11px;font-size:11.5px}
+
+/* ---------- 圖面縮放 ---------- */
+.zoom{display:flex;align-items:center;gap:4px;flex:0 0 auto}
+.zoom button{width:30px;height:28px;border-radius:7px;border:1px solid var(--line2);
+  background:var(--btn2);color:var(--txt);font-size:15px;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;padding:0}
+.zoom button:hover{border-color:var(--acc);color:var(--acc)}
+.zoom button.fit{width:auto;padding:0 9px;font-size:11.5px}
+.zoom .pct{font-family:var(--mono);font-size:11px;color:var(--dim);min-width:38px;text-align:center}
+
+/* ---------- 響應式 ---------- */
+@media(max-width:760px){
+  .app{padding:0 8px 40px}
+  header.top{padding:12px 0 8px}
+  .brand h1{font-size:16px;line-height:1.3}
+  .brand .sub{display:none}
+  nav#tabs{gap:5px;margin-top:9px;flex-wrap:nowrap;overflow-x:auto;
+    scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+  nav#tabs::-webkit-scrollbar{height:3px}
+  nav#tabs button{flex:0 0 auto;scroll-snap-align:start;padding:8px 11px;font-size:12.5px}
+  main{gap:10px;margin-top:10px}
+  .card>.hd{flex-wrap:wrap;padding:8px 10px;gap:7px}
+  .card>.hd h3{font-size:11.5px;flex:1 1 100%}
+  .card>.bd{padding:10px}
+  .legend{font-size:10.5px;gap:9px;flex:1 1 100%}
+  #stage .bd{max-height:62vh;padding:4px}
+  .guide .bd{gap:10px}
+  ol.steps{max-height:150px}
+  .narr{font-size:13.5px}
+  button.pb{min-width:0;flex:1 1 calc(50% - 4px);padding:11px 8px}
+  .gbtns button{padding:11px 4px}
+  .lmp{width:46px}
+  .devs{grid-template-columns:repeat(auto-fill,minmax(70px,1fr))}
+  .pwrbox{padding:0 0 12px}
+}
+@media(max-width:400px){
+  button.pb{flex:1 1 100%}
+  .seg button{padding:9px 3px;font-size:11px}
+}
+@media(display-mode:standalone){
+  body{overscroll-behavior-y:contain}
+}
 @media(max-width:900px){.wrap2{flex-direction:column}
   .pwrbox{border-right:0;border-bottom:1px dashed var(--line2);padding:0 0 14px}}
 .act{fill:var(--symc)}
@@ -207,6 +249,13 @@ ol.steps li.done{color:var(--mut)}
 </style>
 </head>
 <body>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1b2230">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="室乙第二站">
+<link rel="apple-touch-icon" href="icon-192.png">
+
 <div class="app">
   <header class="top">
     <div class="brand">
@@ -222,6 +271,12 @@ ol.steps li.done{color:var(--mut)}
     <section class="card" id="stage">
       <div class="hd">
         <h3 id="ctitle">—</h3>
+        <div class="zoom" id="zoom">
+          <button type="button" data-z="-" aria-label="縮小">−</button>
+          <span class="pct" id="zpct">100%</span>
+          <button type="button" data-z="+" aria-label="放大">＋</button>
+          <button type="button" data-z="fit" class="fit">適合寬度</button>
+        </div>
         <div class="seg vsel" id="vsel">
           <button data-v="all">全圖</button><button data-v="pwr">主電路</button><button data-v="ctl">控制電路</button>
         </div>
@@ -397,9 +452,10 @@ class Sim{
   settle(){
     for(let it=0; it<40; it++){
       const out={};
-      const cm=this.cfg.common;
-      const gate = cm ? this.fwd(cm,true,out) : true;
-      for(const r of this.cfg.rungs) this.fwd(r.s, r.bypass?true:gate, out);
+      const ms=this.cfg.master, cm=this.cfg.common;
+      const mg = ms ? this.fwd(ms,true,out) : true;      // 匯流排總開關
+      const cg = cm ? this.fwd(cm,mg,out) : mg;          // 底部共用回路
+      for(const r of this.cfg.rungs) this.fwd(r.s, r.bypass?mg:cg, out);
       let chg=false;
       for(const [key,v] of Object.entries(out)){
         const [name,act]=key.split('|');
@@ -421,6 +477,10 @@ class Sim{
     if(this.cfg.common){
       const any=this.cfg.rungs.some(r=>!r.bypass && r.s.length && r.s[0]._flow);
       this.back(this.cfg.common,any);
+    }
+    if(this.cfg.master){
+      const any=this.cfg.rungs.some(r=>r.s.length && r.s[0]._flow);
+      this.back(this.cfg.master,any);
     }
   }
 
@@ -591,6 +651,30 @@ function symbol(g,el,x,y,sim){
   }
 }
 
+/* ---------- 匯流排上的橫向符號（總開關） ---------- */
+function symbolH(g,el,x,y,sim){
+  const A=(t,at)=>{const e=g.appendChild(mk(t,at)); return e;};
+  const SY=(t,at,base)=>{const e=A(t,Object.assign({class:base},at)); e.dataset.b=base;
+    (el._sym=el._sym||[]).push(e); return e;};
+  el._paths=[]; el._sym=[];
+  const isNC=(el.t==='nc'||el.t==='pnc'||el.t==='tnc');
+  if(el.t==='pno'||el.t==='pnc'){
+    A('circle',{cx:x-12,cy:y,r:3.2,class:'term'});
+    A('circle',{cx:x+12,cy:y,r:3.2,class:'term'});
+    if(isNC) SY('line',{x1:x-12,y1:y,x2:x+12,y2:y},'sym');
+    else     SY('line',{x1:x-12,y1:y+7,x2:x+12,y2:y+7},'sym');
+    SY('line',{x1:x-22,y1:y-14,x2:x+22,y2:y-14},'sym');
+    SY('line',{x1:x,y1:y-14,x2:x,y2:y-1},'sym');
+  } else {
+    SY('line',{x1:x-6,y1:y-16,x2:x-6,y2:y+16},'bar');
+    SY('line',{x1:x+6,y1:y-16,x2:x+6,y2:y+16},'bar');
+    if(isNC) SY('line',{x1:x-12,y1:y+19,x2:x+12,y2:y-19},'sym');
+  }
+  el._brg=A('line',{x1:x-12,y1:y,x2:x+12,y2:y,class:'brg'});
+  el._nm=A('text',{x:x+26,y:y-6,class:'lblL'}); el._nmb='lblL';
+  el._nm.textContent=el.d;
+}
+
 /* ---------- 縱向佈置 ---------- */
 function place(g,seq,x,y0,sim,ctx,term){
   let y=y0;
@@ -666,14 +750,18 @@ function buildLadder(sim){
     place(g,cm,cx,colY,sim,{coilY:colY+1.2*SER,bot},true);
   }
 
+  const ms=cfg.master||[];
+  let mx=150;
+  for(const el of ms){ symbolH(g,el,mx,TOPY,sim); mx+=78; }
   const railA=mk('line',{x1:93,y1:TOPY,x2:W-22,y2:TOPY,class:'rail hot'});
+  cfg._mEnd=mx;
   const railC=mk('line',{x1:93,y1:bot,x2:W-22,y2:bot,class:'rail hot'});
   g.appendChild(railA); g.appendChild(railC);
   for(const x of xs){ dot(g,x,TOPY); dot(g,x,bot); }
   fuse(g,112,TOPY,cfg.railL||'R');
   fuse(g,112,bot,cfg.railR||'T');
   host.appendChild(svg);
-  svg.style.width='100%'; svg.style.minWidth=W+'px'; svg.style.height='auto';
+  cfg._natW=W; applyZoom();
 }
 
 function paintSeq(seq,sim){
@@ -707,6 +795,7 @@ function paintSeq(seq,sim){
 }
 function paintLadder(sim){
   for(const r of sim.cfg.rungs) paintSeq(r.s,sim);
+  if(sim.cfg.master) paintSeq(sim.cfg.master,sim);
   if(sim.cfg.common){
     paintSeq(sim.cfg.common,sim);
     const any=sim.cfg.rungs.some(r=>!r.bypass&&r.s.length&&r.s[0]._flow);
@@ -823,7 +912,24 @@ function paintDevs(sim){
 /* =======================================================================
    5. 導引流程
    ======================================================================= */
-const G={sim:null,cfg:null,sc:0,step:-1,play:false,timer:0,phase:'idle',view:'all'};
+const G={sim:null,cfg:null,sc:0,step:-1,play:false,timer:0,phase:'idle',view:'all',zoom:1};
+function applyZoom(){
+  const svg=document.querySelector('#diagram svg'); if(!svg) return;
+  const W=(G.cfg&&G.cfg._natW)||+svg.getAttribute('viewBox').split(' ')[2];
+  svg.style.width=Math.round(W*G.zoom)+'px';
+  svg.style.minWidth='0'; svg.style.height='auto';
+  const p=document.getElementById('zpct'); if(p) p.textContent=Math.round(G.zoom*100)+'%';
+}
+function fitZoom(){
+  const bd=document.querySelector('#stage .bd'), svg=document.querySelector('#diagram svg');
+  if(!bd||!svg) return;
+  const W=(G.cfg&&G.cfg._natW)||+svg.getAttribute('viewBox').split(' ')[2];
+  const pw=document.getElementById('power');
+  const side=(pw&&pw.offsetParent&&window.innerWidth>900)?pw.offsetWidth:0;
+  const avail=bd.clientWidth-side-46;
+  /* 下限 50%：低於此字就看不清，改由橫向捲動閱讀 */
+  G.zoom=Math.max(0.5,Math.min(1,avail/W)); applyZoom();
+}
 
 function buildScen(){
   const sel=document.getElementById('scen'); sel.innerHTML='';
@@ -1248,8 +1354,8 @@ CIRCUITS.push({
     TR1:{k:'ton',n:'Y-Δ 切換',T:3.5},
     TR2:{k:'toff',n:'復電視窗 t2',T:4},
     TR3:{k:'toff',n:'停止鎖定 t3',T:4},
-    GL:{k:'lamp',n:'停止'},R2:{k:'lamp',n:'Y 啟動'},
-    R1:{k:'lamp',n:'正轉Δ'},R3:{k:'lamp',n:'反轉Δ'}
+    GL:{k:'lamp',n:'停止'},RL2:{k:'lamp',n:'Y 啟動'},
+    RL1:{k:'lamp',n:'正轉Δ'},RL3:{k:'lamp',n:'反轉Δ'}
   },
   inputs:[
     {d:'FWD',n:'正轉',k:'mom',c:'grn'},{d:'REV',n:'反轉',k:'mom',c:'grn'},
@@ -1257,21 +1363,26 @@ CIRCUITS.push({
     {d:'EMS',n:'緊急停止(可長按)',k:'tog',c:'red',g:'保持型按鈕'},
     {d:'THR',n:'過載跳脫',k:'tog',c:'ylw',g:'故障模擬'}
   ],
-  lampList:[{d:'GL',n:'停止',c:'okfg'},{d:'R2',n:'Y啟動',c:'ylw'},
-            {d:'R1',n:'正轉Δ',c:'red'},{d:'R3',n:'反轉Δ',c:'blu'}],
+  lampList:[{d:'GL',n:'停止',c:'okfg'},{d:'RL2',n:'Y啟動',c:'ylw'},
+            {d:'RL1',n:'正轉Δ',c:'red'},{d:'RL3',n:'反轉Δ',c:'blu'}],
+  master:[pnc('EMS')],
   rungs:[
-    {s:[pnc('EMS'),tnc('TR3','鎖定'),par([pno('FWD')],[no('MCF','自保')],[tno('TR2'),no('KR','復電')]),nc('MCR','互鎖'),coil('MCF')]},
-    {s:[pnc('EMS'),tnc('TR3','鎖定'),par([pno('REV')],[no('MCR','自保')],[tno('TR2'),nc('KR','復電')]),nc('MCF','互鎖'),coil('MCR')]},
-    {s:[pno('FWD'),coil('KR','S')]},
-    {s:[pno('REV'),coil('KR','R')]},
-    {s:[par([no('MCF')],[no('MCR')]),par([tnc('TR1'),nc('MCD','互鎖'),coil('MCS')],[coil('TR1')])]},
-    {s:[par([no('MCF')],[no('MCR')]),tno('TR1'),nc('MCS','互鎖'),coil('MCD')]},
-    {s:[no('MCD'),coil('TR2')]},
+    {s:[tnc('TR3','鎖定'),par([pno('FWD')],[no('MCF','自保')],[tno('TR2'),no('KR','復電')]),
+        nc('MCR','互鎖'),coil('MCF')]},
+    {s:[tnc('TR3'),par([pno('FWD')],[no('MCF')]),nc('MCR'),coil('KR','S')]},
+    {s:[tnc('TR3'),par([pno('REV')],[no('MCR')]),nc('MCF'),coil('KR','R')]},
+    {s:[tnc('TR3','鎖定'),par([pno('REV')],[no('MCR','自保')],[tno('TR2'),nc('KR','復電')]),
+        nc('MCF','互鎖'),coil('MCR')]},
+    {s:[par([no('MCF')],[no('MCR')]),par(
+        [coil('TR1')],
+        [tnc('TR1'),nc('MCD','互鎖'),coil('MCS')],
+        [tno('TR1'),nc('MCS','互鎖'),coil('MCD')])]},
+    {s:[no('MCS'),lamp('RL2','ylw')]},
+    {s:[no('MCD'),no('KR','正轉'),lamp('RL1','red')]},
+    {s:[no('MCD'),nc('KR','反轉'),lamp('RL3','blu')]},
     {s:[pno('OFF'),coil('TR3')]},
-    {s:[nc('MCF'),nc('MCR'),lamp('GL','okfg')],bypass:1},
-    {s:[no('MCS'),lamp('R2','ylw')]},
-    {s:[no('MCD'),no('MCF'),lamp('R1','red')]},
-    {s:[no('MCD'),no('MCR'),lamp('R3','blu')]}
+    {s:[no('MCD'),coil('TR2')]},
+    {s:[nc('MCF'),nc('MCR'),lamp('GL','okfg')],bypass:1}
   ],
   common:[nc('THR')],
   power(S){ return powerYD(S); },
@@ -1303,8 +1414,8 @@ CIRCUITS.push({
      steps:[
       {t:'1　電路初始，除 GL 亮外，其餘皆不動作。',hold:1.4},
       {t:'1-1　按下 FWD，MCF 動作且自保持，綠燈滅，KR 被 SET 為「正轉」記憶。',a:S=>S.tap('FWD',.5),hold:2},
-      {t:'1-2　同時 MCS 動作、TR1 開始計時，馬達以 Y 接線啟動，R2 亮。',hold:2},
-      {t:'3　TR1 計時到，MCS 跳脫、MCD 動作，馬達以 Δ 接線運轉，R2 滅、R1 亮。',hold:2.4,until:S=>S.get('MCD')},
+      {t:'1-2　同時 MCS 動作、TR1 開始計時，馬達以 Y 接線啟動，RL2 亮。',hold:2},
+      {t:'3　TR1 計時到，MCS 跳脫、MCD 動作，馬達以 Δ 接線運轉，RL2 熄、RL1 亮。',hold:2.4,until:S=>S.get('MCD')},
       {t:'4　同時 TR2（Off-Delay）動作，接點立刻動作 → MCF 取得第二條導通路徑（正轉啟動完成）。',hold:2.4}
      ]},
     {name:'2. 正轉啟動中按 EMS（無法復歸）',
@@ -1320,8 +1431,8 @@ CIRCUITS.push({
       {t:'3-1　按下 EMS，所有動作停止，但 TR2 及 KR 的接點尚未復歸…',a:S=>S.set('EMS',true),hold:2},
       {t:'3-2　在 TR2 設定的時限內放開 EMS，MCF 經 TR2·KR 路徑恢復動作，繼續完成 Y-Δ 啟動…',
        a:S=>S.set('EMS',false),hold:2},
-      {t:'3-3　Y 啟動：MCF 及 MCS 動作，馬達 Y 結線啟動，R2 亮。',hold:2},
-      {t:'3-4　TR1 時間到轉為 Δ 運轉，MCF 及 MCD 動作，R1 亮。',hold:2.4,until:S=>S.get('MCD')}
+      {t:'3-3　Y 啟動：MCF 及 MCS 動作，馬達 Y 結線啟動，RL2 亮。',hold:2},
+      {t:'3-4　TR1 時間到轉為 Δ 運轉，MCF 及 MCD 動作，RL1 亮。',hold:2.4,until:S=>S.get('MCD')}
      ]},
     {name:'4. 正轉Δ運轉時按 EMS，超過 t2 才放開',
      steps:[
@@ -1342,8 +1453,8 @@ CIRCUITS.push({
     {name:'6. 反轉啟動到完成運轉',
      steps:[
       {t:'6-1　按下 REV，MCR 動作且自保持，綠燈滅，KR 被 RESET 為「反轉」記憶。',a:S=>S.tap('REV',.5),hold:2},
-      {t:'6-2　同時 MCS 動作、TR1 開始計時，馬達以 Y 接線啟動，R2 亮。',hold:2},
-      {t:'6-3　TR1 計時到，MCS 跳脫、MCD 動作，馬達以 Δ 接線運轉，R2 滅、R3 亮。',hold:2.4,until:S=>S.get('MCD')},
+      {t:'6-2　同時 MCS 動作、TR1 開始計時，馬達以 Y 接線啟動，RL2 亮。',hold:2},
+      {t:'6-3　TR1 計時到，MCS 跳脫、MCD 動作，馬達以 Δ 接線運轉，RL2 熄、RL3 亮。',hold:2.4,until:S=>S.get('MCD')},
       {t:'6-4　同時 TR2 動作，使 MCR 有兩個導通的路徑（反轉啟動完成）。',hold:2.4}
      ]},
     {name:'8. 反轉Δ運轉時按 EMS，t2 內放開',
@@ -1351,8 +1462,8 @@ CIRCUITS.push({
       {t:'先完成反轉 Y-Δ 啟動。',a:S=>S.tap('REV',.5),hold:5,until:S=>S.get('MCD')},
       {t:'8-1　按下 EMS，所有動作停止，但 TR2 的接點尚未復歸…',a:S=>S.set('EMS',true),hold:2},
       {t:'8-2　在 TR2 設定的時限內放開 EMS，MCR 恢復動作，繼續完成 Y-Δ 啟動。',a:S=>S.set('EMS',false),hold:2},
-      {t:'8-3　Y 啟動：MCR 及 MCS 動作，馬達 Y 結線啟動，R2 亮。',hold:2},
-      {t:'8-4　Δ 運轉：MCR 及 MCD 動作，R3 亮。',hold:2.4,until:S=>S.get('MCD')}
+      {t:'8-3　Y 啟動：MCR 及 MCS 動作，馬達 Y 結線啟動，RL2 亮。',hold:2},
+      {t:'8-4　Δ 運轉：MCR 及 MCD 動作，RL3 亮。',hold:2.4,until:S=>S.get('MCD')}
      ]}
   ]
 });
@@ -1459,7 +1570,7 @@ CIRCUITS.push({
     {name:'1. 手動操作（M1 動作）',setup:S=>{S.set('COSM',1);S.set('COSA',0);S.m.lv=8;},
      steps:[
       {t:'1　電路初始（手動模式），S2、S0 受電、61F-G 工作中，水塔沒水，給水源 FS 閉合；除 G2 亮外其餘皆不動作。',hold:1.6},
-      {t:'1-2　按下 ON1，MC1 動作且自保持，R1 亮、G2 滅，M1 開始運轉（MC2 的 b 接點形成互鎖）。',a:S=>S.tap('ON1',.5),hold:2.4},
+      {t:'1-2　按下 ON1，MC1 動作且自保持，RL1 亮、G2 滅，M1 開始運轉（MC2 的 b 接點形成互鎖）。',a:S=>S.tap('ON1',.5),hold:2.4},
       {t:'1-3　按下 OFF1，MC1 復歸、R1 滅、M1 停止、G2 亮，電路回復初始狀態。',a:S=>S.tap('OFF1',.5),hold:2},
       {t:'1-4　重新啟動後遇過載 TH-RY1 跳脫：MC1 復歸、R1 滅、M1 停止、G2 亮，BZ 響。',
        a:S=>{S.tap('ON1',.5);setTimeout(()=>{},0);},hold:1.4},
@@ -1468,9 +1579,9 @@ CIRCUITS.push({
      ]},
     {name:'2. 手動操作（M2 動作）',setup:S=>{S.set('COSM',1);S.set('COSA',0);S.m.lv=8;},
      steps:[
-      {t:'2-1　按下 ON2，MC2 動作且自保持、R2 亮、G2 滅，M2 開始運轉（MC1 的 b 接點互鎖）。',a:S=>S.tap('ON2',.5),hold:2.4},
-      {t:'2-2　按 OFF2，MC2 復歸、R2 滅、G2 亮，電路回復初始狀態。',a:S=>S.tap('OFF2',.5),hold:2},
-      {t:'2-3　再啟動後 TH-RY2 跳脫：MC2 復歸、R2 滅、M2 停止、G2 亮，BZ 響。',a:S=>{S.tap('ON2',.5);},hold:1.4},
+      {t:'2-1　按下 ON2，MC2 動作且自保持、RL2 亮、G2 滅，M2 開始運轉（MC1 的 b 接點互鎖）。',a:S=>S.tap('ON2',.5),hold:2.4},
+      {t:'2-2　按 OFF2，MC2 復歸、RL2 熄、G2 亮，電路回復初始狀態。',a:S=>S.tap('OFF2',.5),hold:2},
+      {t:'2-3　再啟動後 TH-RY2 跳脫：MC2 復歸、RL2 熄、M2 停止、G2 亮，BZ 響。',a:S=>{S.tap('ON2',.5);},hold:1.4},
       {t:'　　　（TH-RY2 跳脫中）',a:S=>S.set('THR2',true),hold:2},
       {t:'2-4　故障排除後將 TH-RY2 復歸，BZ 停響，電路回復初始狀態。',a:S=>S.set('THR2',false),hold:2}
      ]},
@@ -1478,10 +1589,10 @@ CIRCUITS.push({
      steps:[
       {t:'3-1　COS 切至自動。當給水源沒水（FS 下垂、接點開路），除 G2 亮外其餘皆不動作。',hold:2},
       {t:'3-2　給水源有水，FS 提起、接點接通才可以開始動作。',a:S=>S.set('FS',true),hold:1.8},
-      {t:'3-3　水塔沒水（X 未動作），MC1 動作使 M1 運轉、R1 亮、G2 滅，水塔水位逐漸上升…',hold:3},
+      {t:'3-3　水塔沒水（X 未動作），MC1 動作使 M1 運轉、RL1 亮、G2 滅，水塔水位逐漸上升…',hold:3},
       {t:'3-4　水塔至滿水位，X、MR 動作，G1 亮；MC1 跳脫、M1 停止、G2 亮。MR 接點已切換。',
        hold:3,until:S=>S.get('X')},
-      {t:'3-5　水塔降至低水位以下，X、MR 跳脫，G1 滅；改由 MC2 動作、R2 亮、M2 運轉、G2 滅。',
+      {t:'3-5　水塔降至低水位以下，X、MR 跳脫，G1 滅；改由 MC2 動作、RL2 亮、M2 運轉、G2 滅。',
        hold:3,until:S=>S.get('MC2')},
       {t:'3-6　再次滿水位，X、MR 動作，G1 亮；MC2 跳脫、M2 停止、G2 亮。MR 接點再切換一次，下輪換 M1。',
        hold:3,until:S=>S.get('X')}
@@ -1490,7 +1601,7 @@ CIRCUITS.push({
      steps:[
       {t:'自動模式運轉中（M1 抽水）。',hold:2,until:S=>S.get('MC1')||S.get('MC2')},
       {t:'4-1　M1 運轉當中 TH-RY 跳脫，M1 立刻停止，BZ 響、G2 亮。',a:S=>S.set('THR1',true),hold:2.4},
-      {t:'4-2　故障排除後將 TH-RY 復歸，BZ 停響；因自動條件仍成立，MC1 動作、R1 亮、M1 恢復運轉、G2 滅。',
+      {t:'4-2　故障排除後將 TH-RY 復歸，BZ 停響；因自動條件仍成立，MC1 動作、RL1 亮、M1 恢復運轉、G2 滅。',
        a:S=>S.set('THR1',false),hold:2.4}
      ]}
   ]
@@ -1574,7 +1685,7 @@ CIRCUITS.push({
     {name:'1. 手動操作（M1 動作、停止及跳脫）',setup:S=>{S.set('COSM',1);S.set('COSA',0);S.m.lv=6;},
      steps:[
       {t:'1-1　電路初始（手動），除 G1 及 G2 亮外，其餘皆不動作。',hold:1.6},
-      {t:'1-2　按下 ON1，MC1 動作且自保持，R1 亮、G1 滅，M1 開始運轉…',a:S=>S.tap('ON1',.5),hold:2.2},
+      {t:'1-2　按下 ON1，MC1 動作且自保持，RL1 亮、G1 滅，M1 開始運轉…',a:S=>S.tap('ON1',.5),hold:2.2},
       {t:'1-3　按下 OFF1，MC1 復歸、R1 滅、G1 亮，M1 停止…',a:S=>S.tap('OFF1',.5),hold:2},
       {t:'1-4　再啟動後過載 TH-RY 跳脫：MC1 復歸、R1 滅、M1 停止，G1 亮，BZ 響。',a:S=>{S.tap('ON1',.5);},hold:1.3},
       {t:'　　　（TH-RY1 跳脫中）',a:S=>S.set('THR1',true),hold:2},
@@ -1583,7 +1694,7 @@ CIRCUITS.push({
     {name:'3. 手動操作（M1、M2 同時運轉）',setup:S=>{S.set('COSM',1);S.set('COSA',0);S.m.lv=6;},
      steps:[
       {t:'3-1　先按 ON1 使 M1 運轉。',a:S=>S.tap('ON1',.5),hold:2},
-      {t:'3-2　M1 動作當中按 ON2，MC2 動作且自保持、R2 亮、G2 滅，M2 也開始運轉（本電路兩台不互鎖）。',
+      {t:'3-2　M1 動作當中按 ON2，MC2 動作且自保持、RL2 亮、G2 滅，M2 也開始運轉（本電路兩台不互鎖）。',
        a:S=>S.tap('ON2',.5),hold:2.4},
       {t:'3-3　分別按 OFF1、OFF2 即可各自停止。',a:S=>{S.tap('OFF1',.5);S.tap('OFF2',.5);},hold:2}
      ]},
@@ -1593,10 +1704,10 @@ CIRCUITS.push({
       {t:'4-2　BS2 及 BS1 開路，Tc1、Tb1 導通，61F-APN2 接點動作（決定本輪主泵）。',hold:2},
       {t:'4-3　污水上升到高水位，BS1 短路，Tc1、Ta1 導通，61F-APN2 不受電但接點維持…',
        hold:3.5,until:S=>S.get('L1')},
-      {t:'4-4　此時 MC2 動作、R2 亮、G2 滅，M2 運轉開始抽污水，水位下降中…',hold:3},
-      {t:'4-5　水位降至下限，Tc1、Ta1 開路 → MC2 復歸、R2 滅、M2 停止、G2 亮；61F-APN2 動作，接點切換。',
+      {t:'4-4　此時 MC2 動作、RL2 亮、G2 滅，M2 運轉開始抽污水，水位下降中…',hold:3},
+      {t:'4-5　水位降至下限，Tc1、Ta1 開路 → MC2 復歸、RL2 熄、M2 停止、G2 亮；61F-APN2 動作，接點切換。',
        hold:4,until:S=>!S.get('L1')},
-      {t:'4-6　水位又上升至上限，Tc1、Ta1 導通，61F-APN2 跳脫但接點狀態不變 → 這次改由 MC1 動作、R1 亮、M1 運轉、G1 滅。',
+      {t:'4-6　水位又上升至上限，Tc1、Ta1 導通，61F-APN2 跳脫但接點狀態不變 → 這次改由 MC1 動作、RL1 亮、M1 運轉、G1 滅。',
        hold:4,until:S=>S.get('MC1')},
       {t:'4-7　水位到達下限，61F-APN2 再受電、接點動作，MC1 復歸、R1 滅、M1 停止、G1 亮 —— 交互循環完成。',
        hold:4,until:S=>!S.get('L1')}
@@ -1604,7 +1715,7 @@ CIRCUITS.push({
     {name:'5. 自動操作（異常水位並列運轉）',setup:S=>{S.set('COSM',0);S.set('COSA',1);S.m.lv=55;S.set('INF',true);},
      steps:[
       {t:'大量污水入流，水位持續上升，主泵已啟動但抽不贏…',hold:2.5},
-      {t:'4-7　水位上升至異常上限，BS2 導通、Tc2、Ta2 導通 → X 動作、YL 亮；MC2 亦動作、R2 亮、M2 運轉，M1 和 M2 同時抽水。',
+      {t:'4-7　水位上升至異常上限，BS2 導通、Tc2、Ta2 導通 → X 動作、YL 亮；MC2 亦動作、RL2 亮、M2 運轉，M1 和 M2 同時抽水。',
        hold:3.5,until:S=>S.get('X')},
       {t:'4-8　入流恢復正常，水位下降，BS2 開路使 X 復歸、YL 滅；但 MC2 因有另一分路（自保）導通，M1、M2 依然同時運轉。',
        a:S=>S.set('INF',false),hold:3.5},
@@ -1799,32 +1910,32 @@ CIRCUITS.push({
      steps:[
       {t:'1　電路初始，PH 受電，其餘皆不動作。大門閉合，LS2 動作。',hold:1.6},
       {t:'2　訪客由外入內，PH1 遮光，X3 動作。',a:S=>S.set('PH1',true),hold:1.6},
-      {t:'3　接著 MCF 動作且自保持、R1 亮、電動機正轉（開門）。',hold:1.8},
+      {t:'3　接著 MCF 動作且自保持、RL1 亮、電動機正轉（開門）。',hold:1.8},
       {t:'4　同時 TR1 動作開始計時並自保持、Y1 亮（歡迎光臨）。',hold:1.6},
       {t:'5　訪客已入內，PH1 不遮光，X3 復歸，MCF 及 TR1 依然自保持。',a:S=>S.set('PH1',false),hold:1.8},
       {t:'8　大門全開，LS1 動作 → MCF 復歸、R1 滅、馬達停止；TR5 動作並開始計時。',
        hold:2.4,until:S=>S.get('LS1')},
       {t:'6　T1 時間到，TR1 接點動作，Y1（歡迎光臨）滅，X1 動作，TR3 開始計時。',hold:2.2,until:S=>S.get('X1')},
       {t:'7　TR3 計時到，TR1 跳脫，X1 復歸，TR3 也復歸。',hold:2},
-      {t:'9　TR5 計時到，接點動作，MCR 動作且自保持、R2 亮、馬達反轉，大門關閉。',
+      {t:'9　TR5 計時到，接點動作，MCR 動作且自保持、RL2 亮、馬達反轉，大門關閉。',
        hold:2.4,until:S=>S.get('MCR')},
       {t:'10　關門動作啟動後 LS1 復歸，TR5 跳脫，接點也隨著復歸。',hold:2},
-      {t:'11　門關至閉合 LS2 動作，MCR 跳脫、R2 滅、馬達停止，回復初始狀態。',
+      {t:'11　門關至閉合 LS2 動作，MCR 跳脫、RL2 熄、馬達停止，回復初始狀態。',
        hold:3,until:S=>S.get('LS2')}
      ]},
     {name:'3+4. 訪客由內出外（燈號＋門動作）',
      steps:[
       {t:'11　電路初始，PH 受電，大門閉合，LS2 動作。',hold:1.6},
       {t:'12　訪客由內出外，PH2 遮光，X4 動作。',a:S=>S.set('PH2',true),hold:1.6},
-      {t:'13　接著 MCF 動作且自保持、R1 亮、電動機正轉（開門）。',hold:1.8},
+      {t:'13　接著 MCF 動作且自保持、RL1 亮、電動機正轉（開門）。',hold:1.8},
       {t:'14　同時 TR2 動作開始計時並自保持、Y2 亮（謝謝光臨）。',hold:1.6},
       {t:'15　訪客已出外，PH2 不遮光，X4 復歸，MCF 及 TR2 依然自保持。',a:S=>S.set('PH2',false),hold:1.8},
       {t:'18　大門全開，LS1 動作，MCF 復歸、R1 滅、馬達停止，TR5 動作並開始計時。',
        hold:2.4,until:S=>S.get('LS1')},
       {t:'16　T2 時間到，TR2 接點動作，Y2（謝謝光臨）滅，X2 動作，TR4 開始計時。',hold:2.2,until:S=>S.get('X2')},
       {t:'17　TR4 計時到，TR2 跳脫，X2 復歸，TR4 也復歸。',hold:2},
-      {t:'19　TR5 計時到，MCR 動作且自保持、R2 亮、馬達反轉，大門關閉。',hold:2.4,until:S=>S.get('MCR')},
-      {t:'20　門關至閉合 LS2 動作，MCR 跳脫、R2 滅、馬達停止，回復初始狀態。',
+      {t:'19　TR5 計時到，MCR 動作且自保持、RL2 亮、馬達反轉，大門關閉。',hold:2.4,until:S=>S.get('MCR')},
+      {t:'20　門關至閉合 LS2 動作，MCR 跳脫、RL2 熄、馬達停止，回復初始狀態。',
        hold:3,until:S=>S.get('LS2')}
      ]},
     {name:'5. EMS 被按下或 TH-RY 跳脫',
@@ -1986,7 +2097,9 @@ CIRCUITS.push({
   post(S,dt){ S.m.kwh=(S.m.kwh||0)+dt*0.09; S.m.kvarh=(S.m.kvarh||0)+dt*0.05; },
   custom(){ const h=document.getElementById('diagram'); h.innerHTML=q8svg();
     const v=h.querySelector('svg');
-    if(v){ v.style.width='100%'; v.style.minWidth='920px'; v.style.height='auto'; } },
+    if(v){ G.cfg._natW=920;
+      const nar=window.innerWidth<=760;
+      v.style.width=nar?'100%':'920px'; v.style.minWidth=nar?'0':'920px'; v.style.height='auto'; } },
   paint(S){ q8paint(S); },
   scenarios:[
     {name:'1. 電源線配置',steps:[
@@ -2148,6 +2261,7 @@ function loadCircuit(i){
   document.getElementById('cDevs').style.display=(G.cfg._dl||[]).length?'':'none';
   document.getElementById('narr').innerHTML = G.cfg.desc || '選擇情境開始，或直接操作。';
   [...document.querySelectorAll('#tabs button')].forEach((b,k)=>b.classList.toggle('on',k===i));
+  if(!G.cfg.custom){ if(window.innerWidth<=760) fitZoom(); else { G.zoom=1; applyZoom(); } }
 }
 function buildTabs(){
   const n=document.getElementById('tabs'); n.innerHTML='';
@@ -2163,7 +2277,7 @@ function loop(now){
     paintControls(G.sim); paintLamps(G.sim); paintDevs(G.sim);
     if(G.cfg.scene) document.getElementById('scene').innerHTML=G.cfg.scene(G.sim);
     if(G.cfg.power && G.view!=='ctl'){
-      const k=G.view==='pwr'?2.0:1.5;
+      const k=window.innerWidth<=760 ? (G.view==='pwr'?1.2:0.9) : (G.view==='pwr'?2.0:1.5);
       document.getElementById('power').innerHTML='<p class="cap">主電路（動力電路）</p>'+
         G.cfg.power(G.sim).replace(/viewBox="0 0 (\d+) (\d+)"/,
           (m,w,h)=>`viewBox="0 0 ${w} ${h}" width="${Math.round(w*k)}" height="${Math.round(h*k)}"`);
@@ -2185,6 +2299,12 @@ function loop(now){
 document.getElementById('scen').onchange=e=>{ G.sc=+e.target.value; G.step=-1; G.sim.reset();
   const sc=G.cfg.scenarios[G.sc]; if(sc.setup) sc.setup(G.sim); renderSteps();
   document.getElementById('narr').innerHTML=sc.intro||'按「下一步」開始逐步觀察。'; };
+[...document.querySelectorAll('#zoom button')].forEach(b=>b.onclick=()=>{
+  const z=b.dataset.z;
+  if(z==='fit') fitZoom();
+  else { G.zoom=Math.max(0.25,Math.min(3,G.zoom*(z==='+'?1.25:0.8))); applyZoom(); }
+});
+window.addEventListener('resize',()=>{ if(window.innerWidth<=760) fitZoom(); });
 [...document.querySelectorAll('#vsel button')].forEach(b=>b.onclick=()=>{
   G.view=b.dataset.v; loadCircuit(CIRCUITS.indexOf(G.cfg)); });
 document.getElementById('bNext').onclick=nextStep;
@@ -2203,6 +2323,11 @@ document.getElementById('theme').onclick=()=>
   setTheme(t);
 })();
 buildTabs(); loadCircuit(0); requestAnimationFrame(loop);
+
+/* ---------- PWA ---------- */
+if('serviceWorker' in navigator && location.protocol!=='file:'){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
 </script>
 </body>
 </html>
