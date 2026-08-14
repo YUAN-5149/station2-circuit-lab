@@ -836,7 +836,7 @@ function renderSteps(){
   const ol=document.getElementById('steplist'); ol.innerHTML='';
   const sc=(G.cfg.scenarios||[])[G.sc]; if(!sc) return;
   sc.steps.forEach((st,i)=>{
-    const li=document.createElement('li'); li.textContent=st.t;
+    const li=document.createElement('li'); li.innerHTML=st.t;
     li.className = i===G.step?'on':(i<G.step?'done':'');
     li.onclick=()=>{ gotoStep(i); };
     ol.appendChild(li);
@@ -1937,7 +1937,9 @@ CIRCUITS.push({
   init(S){ S.set('LY1',1);S.set('LY2',1);S.set('LY3',1);S.set('LY4',1);
            S.set('VS1',1); S.set('AS1',1); S.m.kwh=1284.6; S.m.kvarh=372.1; },
   post(S,dt){ S.m.kwh=(S.m.kwh||0)+dt*0.09; S.m.kvarh=(S.m.kvarh||0)+dt*0.05; },
-  custom(){ document.getElementById('diagram').innerHTML=q8svg(); },
+  custom(){ const h=document.getElementById('diagram'); h.innerHTML=q8svg();
+    const v=h.querySelector('svg');
+    if(v){ v.style.width='100%'; v.style.minWidth='920px'; v.style.height='auto'; } },
   paint(S){ q8paint(S); },
   scenarios:[
     {name:'1. 電源線配置',steps:[
