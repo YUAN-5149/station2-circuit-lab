@@ -1,0 +1,2159 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>室乙第二站電路實驗室</title>
+<style>
+:root{
+  /* 深色（提亮版·預設） */
+  --bg:#1b2230; --bg2:#222c3b; --panel:#212a39; --panel2:#283344;
+  --line:#3c4a60; --line2:#4d5e77;
+  --txt:#e4ecf6; --mut:#9fb0c6; --dim:#7b8ca3;
+  --wire:#5d6d85; --hot:#ff5241; --volt:#f5ae3f;
+  --railc:#8496ad; --symc:#a9b9cf; --lblc:#cbd8e8; --lblhot:#ffd9d4;
+  --coilf:#1b2432; --coilon:#4a1c16; --rnc:#6f8199;
+  --sf:#1e2836; --sf2:#27313f; --sfh:#2f3a4b; --trk:#333d4e; --div:#38445a;
+  --btn1:#2e3a4d; --btn2:#222c3b; --btnsh:#141a24;
+  --dvon:#42201a; --dvonb:#8a3529; --dvonn:#ff9083; --dvons:#d09a92;
+  --acc:#ffb020; --accTx:#20160a; --capTx:#f5f8fc;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,"SF Mono",monospace;
+  --sans:"Segoe UI","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
+}
+:root[data-theme="light"]{
+  --bg:#e9eef5; --bg2:#f4f7fb; --panel:#ffffff; --panel2:#f1f5fa;
+  --line:#ccd6e3; --line2:#adbbcb;
+  --txt:#1e2836; --mut:#4f5e70; --dim:#667586;
+  --wire:#93a2b6; --hot:#d63619; --volt:#a86c06;
+  --railc:#74829a; --symc:#54627a; --lblc:#2b3644; --lblhot:#9d2712;
+  --coilf:#ffffff; --coilon:#ffdfd8; --rnc:#8593a5;
+  --sf:#ffffff; --sf2:#f1f5fa; --sfh:#e5ecf5; --trk:#dce3ed; --div:#dbe2ec;
+  --btn1:#ffffff; --btn2:#e9eef5; --btnsh:#c0cad8;
+  --dvon:#fde4de; --dvonb:#e5a094; --dvonn:#b32d17; --dvons:#8a564c;
+  --acc:#a86800; --accTx:#fff6e6; --capTx:#f5f8fc;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;line-height:1.5}
+h1,h2,h3{margin:0;font-weight:650;letter-spacing:.01em}
+
+/* ---------- shell ---------- */
+.app{max-width:1560px;margin:0 auto;padding:0 14px 60px}
+header.top{padding:18px 2px 12px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.brand h1{font-size:19px}
+.brand .sub{font-size:12.5px;color:var(--mut)}
+.brand .sp{flex:1}
+button.tgl{background:var(--btn1);color:var(--txt);border:1px solid var(--line2);
+  border-radius:8px;padding:6px 12px;font-size:12.5px;font-family:var(--sans);cursor:pointer;
+  transition:.14s;align-self:center}
+button.tgl:hover{border-color:var(--acc);color:var(--acc)}
+nav#tabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+nav#tabs button{
+  background:var(--panel);color:var(--mut);border:1px solid var(--line);
+  border-radius:8px;padding:7px 12px;font-size:13px;font-family:var(--sans);
+  cursor:pointer;transition:.14s;white-space:nowrap}
+nav#tabs button:hover{border-color:var(--line2);color:var(--txt)}
+nav#tabs button.on{background:var(--acc);border-color:var(--acc);color:var(--accTx);font-weight:650}
+
+main{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:14px;margin-top:14px;align-items:start}
+@media(max-width:1180px){main{grid-template-columns:1fr}}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.card>.hd{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:9px 13px;background:var(--panel2);border-bottom:1px solid var(--line)}
+.card>.hd h3{font-size:12.5px;color:var(--mut);letter-spacing:.09em;text-transform:uppercase;font-weight:600}
+.card>.bd{padding:13px}
+
+/* ---------- ladder stage ---------- */
+#stage .bd{padding:6px 8px 10px;overflow:auto;max-height:min(780px,80vh);
+  background:radial-gradient(circle at 18% 0%,var(--bg2) 0%,var(--panel) 62%);
+  scrollbar-color:var(--line2) transparent}
+#diagram svg{display:block;height:auto}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--mut)}
+.legend i{display:inline-block;width:16px;height:3px;border-radius:2px;margin-right:5px;vertical-align:2px}
+
+/* svg classes */
+.w{stroke:var(--wire);stroke-width:2.1;fill:none;stroke-linecap:round}
+.w.hot{stroke:var(--hot);stroke-width:3.1;filter:drop-shadow(0 0 4px rgba(255,68,54,.55))}
+.w.volt{stroke:var(--volt);stroke-width:2.4;opacity:.9}
+.rail{stroke:var(--railc);stroke-width:3;fill:none}
+.rail.hot{stroke:var(--hot);filter:drop-shadow(0 0 5px rgba(255,68,54,.45))}
+.sym{stroke:var(--symc);stroke-width:2.4;fill:none;stroke-linecap:round}
+.sym.hot{stroke:var(--hot)}
+.sym.volt{stroke:var(--volt)}
+.tsym{fill:var(--symc)}
+.tagbg{fill:#ffb020}
+.brg{stroke:var(--hot);stroke-width:2.6;fill:none;opacity:0}
+.brg.on{opacity:1;filter:drop-shadow(0 0 4px rgba(255,68,54,.6))}
+.lbl{font-family:var(--mono);font-size:11.5px;fill:var(--lblc);text-anchor:middle;font-weight:600}
+.lbl.hot{fill:var(--lblhot)}
+.sub{font-family:var(--sans);font-size:9.5px;fill:var(--dim);text-anchor:middle}
+.tag{font-family:var(--sans);font-size:9.5px;fill:#20160a;text-anchor:middle;font-weight:700}
+.coilbg{fill:var(--coilf);stroke:var(--symc);stroke-width:2.4}
+.coilbg.on{fill:var(--coilon);stroke:var(--hot);filter:drop-shadow(0 0 6px rgba(255,68,54,.5))}
+.rn{font-family:var(--mono);font-size:10px;fill:var(--rnc);text-anchor:end}
+.bar{stroke:var(--symc);stroke-width:4.2;fill:none;stroke-linecap:butt}
+.bar.hot{stroke:var(--hot)}
+.term{fill:var(--coilf);stroke:var(--symc);stroke-width:1.8}
+.jd{fill:var(--railc)}
+.fuse{fill:var(--coilf);stroke:var(--symc);stroke-width:1.8}
+.wrap2{display:flex;align-items:flex-start;gap:22px}
+.pwrbox{flex:0 0 auto;border-right:1px dashed var(--line2);padding-right:20px}
+.pwrbox svg{display:block;height:auto}
+.pwrbox .cap,.ctlcap{font-size:11px;color:var(--dim);letter-spacing:.06em;margin:0 0 6px}
+.seg.vsel{width:auto;flex:0 0 auto}
+.seg.vsel button{padding:5px 11px;font-size:11.5px}
+@media(max-width:900px){.wrap2{flex-direction:column}
+  .pwrbox{border-right:0;border-bottom:1px dashed var(--line2);padding:0 0 14px}}
+.act{fill:var(--symc)}
+.arw{fill:var(--railc)}
+.lblL{font-family:var(--mono);font-size:11.5px;fill:var(--lblc);text-anchor:start;font-weight:600}
+.lblL.hot{fill:var(--lblhot)}
+.cin{font-family:var(--mono);font-size:10.5px;fill:var(--lblc);text-anchor:middle;font-weight:700}
+.cin.on{fill:var(--lblhot)}
+.brg{stroke-width:4.2}
+
+
+/* ---------- side panel ---------- */
+aside{display:flex;flex-direction:column;gap:12px}
+#scene svg{display:block;width:100%;height:auto}
+
+.ctl{display:flex;flex-direction:column;gap:11px}
+.ctl .grp{display:flex;flex-direction:column;gap:6px}
+.ctl .gl{font-size:10.5px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+.btnrow{display:flex;gap:7px;flex-wrap:wrap}
+button.pb{
+  position:relative;min-width:64px;padding:9px 12px;border-radius:9px;cursor:pointer;
+  border:1px solid var(--line2);background:linear-gradient(var(--btn1),var(--btn2));color:var(--txt);
+  font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.03em;
+  transition:transform .06s,box-shadow .12s;box-shadow:0 3px 0 var(--btnsh), 0 4px 8px rgba(0,0,0,.18);
+  user-select:none;-webkit-user-select:none;touch-action:manipulation}
+button.pb small{display:block;font-family:var(--sans);font-size:9.5px;font-weight:500;color:var(--mut);letter-spacing:0}
+button.pb:active,button.pb.down{transform:translateY(3px);box-shadow:0 0 0 var(--btnsh),0 1px 4px rgba(0,0,0,.22)}
+button.pb.grn,button.pb.red,button.pb.ylw,button.pb.on{color:var(--capTx)}
+button.pb.grn small,button.pb.red small,button.pb.ylw small,button.pb.on small{color:rgba(245,248,252,.72)}
+button.pb.grn{border-color:#1f6b41;background:linear-gradient(#25714a,#164a2d)}
+button.pb.red{border-color:#8a2b22;background:linear-gradient(#8c352a,#5a1f18)}
+button.pb.ylw{border-color:#8a7020;background:linear-gradient(#8a7622,#544615)}
+button.pb.down.grn,button.pb.grn:active{background:linear-gradient(#34a065,#25714a)}
+button.pb.down.red,button.pb.red:active{background:linear-gradient(#b0402f,#8c352a)}
+button.pb.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc),0 0 12px rgba(255,176,32,.28);
+  background:linear-gradient(#6b4e15,#42300b)}
+
+.seg{display:flex;border:1px solid var(--line2);border-radius:9px;overflow:hidden}
+.seg button{flex:1;padding:8px 6px;background:var(--btn2);border:0;border-right:1px solid var(--line2);
+  color:var(--mut);font-family:var(--sans);font-size:12px;cursor:pointer;transition:.12s}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--acc);color:var(--accTx);font-weight:700}
+
+.slider{display:flex;align-items:center;gap:9px}
+.slider input{flex:1;accent-color:var(--acc)}
+.slider span{font-family:var(--mono);font-size:11.5px;color:var(--mut);min-width:42px;text-align:right}
+
+/* lamps + status */
+.lamps{display:flex;gap:9px;flex-wrap:wrap}
+.lmp{display:flex;flex-direction:column;align-items:center;gap:4px;width:52px}
+.lmp .bulb{width:28px;height:28px;border-radius:50%;background:var(--sf);
+  border:2px solid var(--line2);transition:.18s}
+.lmp .nm{font-family:var(--mono);font-size:10px;color:var(--dim);font-weight:700}
+.lmp .cn{font-size:9px;color:var(--dim);text-align:center;line-height:1.25}
+.lmp.on .nm{color:var(--txt)}
+
+.devs{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px}
+.dv{background:var(--sf);border:1px solid var(--line);border-radius:7px;padding:5px 7px}
+.dv .n{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--mut)}
+.dv .s{font-size:9.5px;color:var(--dim)}
+.dv.on{background:var(--dvon);border-color:var(--dvonb)}
+.dv.on .n{color:var(--dvonn)}
+.dv.on .s{color:var(--dvons)}
+.bar{height:3px;background:var(--trk);border-radius:2px;margin-top:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--acc);width:0}
+
+/* ---------- guide ---------- */
+.guide{margin-top:14px}
+.guide .bd{display:grid;grid-template-columns:230px minmax(0,1fr);gap:14px}
+@media(max-width:820px){.guide .bd{grid-template-columns:1fr}}
+select.sc{width:100%;background:var(--sf);color:var(--txt);border:1px solid var(--line2);
+  border-radius:8px;padding:8px 9px;font-family:var(--sans);font-size:13px}
+.gbtns{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.gbtns button{flex:1;min-width:62px;padding:8px 4px;border-radius:8px;border:1px solid var(--line2);
+  background:var(--btn2);color:var(--txt);font-size:12.5px;cursor:pointer;transition:.12s}
+.gbtns button:hover{border-color:var(--acc);color:var(--acc)}
+.gbtns button.play{background:var(--acc);border-color:var(--acc);color:var(--accTx);font-weight:700}
+.narr{background:var(--sf2);border:1px solid var(--line);
+  border-radius:8px;padding:11px 13px;font-size:14px;min-height:52px}
+.narr b{color:var(--acc)}
+ol.steps{list-style:none;margin:9px 0 0;padding:0;display:flex;flex-direction:column;gap:3px;
+  max-height:190px;overflow-y:auto}
+ol.steps li{font-size:12.3px;color:var(--dim);padding:4px 9px;border-radius:6px;cursor:pointer;
+  border-left:2px solid transparent}
+ol.steps li:hover{background:var(--sf2);color:var(--mut)}
+ol.steps li.on{background:var(--sfh);color:var(--txt);border-left-color:var(--acc)}
+ol.steps li.done{color:var(--mut)}
+.hint{font-size:12px;color:var(--dim);margin-top:7px}
+.note{font-size:12.5px;color:var(--mut);margin:0 0 10px;line-height:1.65}
+.kv{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px dashed var(--div)}
+.kv:last-child{border-bottom:0}
+.kv b{font-family:var(--mono);color:var(--txt);font-weight:600}
+.kv span{color:var(--mut)}
+
+/* 無障礙 */
+:where(button,select,input):focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.dv,.lmp .bulb,#scene text,.narr{font-variant-numeric:tabular-nums}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition-duration:.01ms !important;animation-duration:.01ms !important}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>室內配線乙級 · 第二站 互動電路實驗室</h1>
+      <span class="sub">CNS 控制電路圖 · 即時通電追蹤 · 動作分解導引</span>
+      <span class="sp"></span>
+      <button class="tgl" id="theme" type="button">◐ 淺色</button>
+    </div>
+    <nav id="tabs"></nav>
+  </header>
+
+  <main>
+    <section class="card" id="stage">
+      <div class="hd">
+        <h3 id="ctitle">—</h3>
+        <div class="seg vsel" id="vsel">
+          <button data-v="all">全圖</button><button data-v="pwr">主電路</button><button data-v="ctl">控制電路</button>
+        </div>
+        <div class="legend">
+          <span><i style="background:var(--hot)"></i>電流通過</span>
+          <span><i style="background:var(--volt)"></i>有電壓·無迴路</span>
+          <span><i style="background:var(--wire)"></i>無電</span>
+        </div>
+      </div>
+      <div class="bd">
+        <div class="wrap2">
+          <div id="power" class="pwrbox"></div>
+          <div id="diagram"></div>
+        </div>
+      </div>
+    </section>
+
+    <aside>
+      <div class="card" id="cScene"><div class="hd"><h3>現場設備狀態</h3></div><div class="bd" id="scene"></div></div>
+      <div class="card"><div class="hd"><h3>操作盤</h3><span class="sub" style="font-size:11px;color:var(--dim)">按鈕＝按住有效</span></div><div class="bd"><div class="ctl" id="controls"></div></div></div>
+      <div class="card" id="cLamps"><div class="hd"><h3>指示燈</h3></div><div class="bd"><div class="lamps" id="lamps"></div></div></div>
+      <div class="card" id="cDevs"><div class="hd"><h3>元件動作狀態</h3></div><div class="bd"><div class="devs" id="devs"></div></div></div>
+    </aside>
+  </main>
+
+  <section class="card guide">
+    <div class="hd"><h3>動作分解導引</h3><span class="sub" id="gstat" style="font-size:11px;color:var(--dim)"></span></div>
+    <div class="bd">
+      <div>
+        <select class="sc" id="scen"></select>
+        <div class="gbtns">
+          <button id="bPrev">← 上一步</button>
+          <button id="bNext">下一步 →</button>
+        </div>
+        <div class="gbtns">
+          <button id="bPlay" class="play">▶ 自動播放</button>
+          <button id="bReset">⟲ 重置電路</button>
+        </div>
+        <div class="hint">點擊右側步驟可直接跳到該階段；也可以完全自由地用「操作盤」自行操作。</div>
+      </div>
+      <div>
+        <div class="narr" id="narr">選擇一個操作情境，或直接按下操作盤上的按鈕自行實驗。</div>
+        <ol class="steps" id="steplist"></ol>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- 主題色盤（場景 SVG 用；階梯圖走 CSS 變數） ---------- */
+const PAL={
+  dark:{
+    bg:'#1b2230', sf:'#1e2836', sf2:'#27313f', trk:'#333d4e', div:'#38445a',
+    ln:'#3f4d63', wr:'#4b5a72', mt:'#5a6a80', mt2:'#69798f', bus:'#e3eaf2',
+    tx:'#cbd8e8', mu:'#9fb0c6', dm:'#7b8ca3', symc:'#a9b9cf',
+    lblhot:'#ffd9d4', coilon:'#4a1c16',
+    okbg:'#17512f', okfg:'#37d67a', hotbg:'#6b2a1f', hotfg:'#ff9083',
+    water:'#1c6fa8', water2:'#14506e', wtop:'#5ec8ff', sew:'#4a6b2f',
+    ramOn:'#7c4a12', ptR:'#ff5f4d', onTx:'#20160a', wht:'#f2f6fb',
+    red:'#ff5544', org:'#ff8c1a', ylw:'#ffd23f', blu:'#4aa8ff', amb:'#ffb020'
+  },
+  light:{
+    bg:'#e9eef5', sf:'#ffffff', sf2:'#f1f5fa', trk:'#dce3ed', div:'#dbe2ec',
+    ln:'#aebbcb', wr:'#93a2b6', mt:'#bcc6d4', mt2:'#98a7ba', bus:'#2b3644',
+    tx:'#2b3644', mu:'#4f5e70', dm:'#667586', symc:'#54627a',
+    lblhot:'#9d2712', coilon:'#ffdfd8',
+    okbg:'#d2efdd', okfg:'#12784a', hotbg:'#fbdbd4', hotfg:'#b3341e',
+    water:'#63aede', water2:'#a6d3ec', wtop:'#1f7fb8', sew:'#9cb977',
+    ramOn:'#d29a3c', ptR:'#c62f1b', onTx:'#20160a', wht:'#2b3644',
+    red:'#c62f1b', org:'#b3600a', ylw:'#96780a', blu:'#1f6fb8', amb:'#a86800'
+  }
+};
+let C=PAL.dark;
+function setTheme(t){
+  C=PAL[t]||PAL.dark;
+  document.documentElement.setAttribute('data-theme',t);
+  try{ localStorage.setItem('s2theme',t); }catch(e){}
+  const b=document.getElementById('theme');
+  if(b) b.textContent = t==='dark' ? '◐ 淺色' : '◑ 深色';
+  if(G.cfg&&G.cfg.custom) G.cfg.custom();
+}
+
+/* =======================================================================
+   1. 階梯圖元件簡寫
+   ======================================================================= */
+const no  =(d,h)=>({t:'no',d,h});      // a 接點（常開）
+const nc  =(d,h)=>({t:'nc',d,h});      // b 接點（常閉）
+const tno =(d,h)=>({t:'tno',d,h});     // 限時 a 接點
+const tnc =(d,h)=>({t:'tnc',d,h});     // 限時 b 接點
+const pno =(d,h)=>({t:'pno',d,h});     // 按鈕 a 接點
+const pnc =(d,h)=>({t:'pnc',d,h});     // 按鈕 b 接點
+const coil=(d,a)=>({t:'coil',d,a});    // 線圈 (a: 'S'/'R'/'C' 特殊功能)
+const lamp=(d,c)=>({t:'lamp',d,c});    // 指示燈
+const bz  =(d)=>({t:'bz',d});          // 蜂鳴器
+const par =(...b)=>({t:'par',b});      // 並聯
+
+/* =======================================================================
+   2. 模擬核心
+   ======================================================================= */
+class Sim{
+  constructor(cfg){ this.cfg=cfg; this.taps=[]; this.reset(); }
+
+  reset(){
+    this.st={}; this.m={};
+    for(const [k,v] of Object.entries(this.cfg.devices)){
+      this.st[k]={k, kind:v.k, n:v.n||k, T:v.T||3, preset:v.preset||5,
+                  on:false, done:false, held:false, t:0, c:false, pc:false, cnt:0};
+    }
+    this.taps=[];
+    if(this.cfg.init) this.cfg.init(this);
+    for(let i=0;i<4;i++) this.tick(0);
+  }
+  d(n){ return this.st[n] || (this.st[n]={k:n,kind:'flag',n,on:false,done:false,held:false,t:0,c:false,pc:false,cnt:0}); }
+  set(n,v){ this.d(n).on=!!v; }
+  get(n){ return this.d(n).on; }
+  tap(n,dur){ this.set(n,true); this.taps.push({n,t:dur||0.35}); }
+  mset(k,v){ this.m[k]=v; }
+
+  /* ---- 單一元件是否導通 ---- */
+  conduct(el){
+    const d=this.d(el.d);
+    switch(el.t){
+      case 'no': case 'pno': return d.on;
+      case 'nc': case 'pnc': return !d.on;
+      case 'tno': return d.kind==='toff' ? d.held : d.done;
+      case 'tnc': return !(d.kind==='toff' ? d.held : d.done);
+    }
+    return true;
+  }
+  isOut(el){ return el.t==='coil'||el.t==='lamp'||el.t==='bz'; }
+
+  /* ---- 正向：電壓傳遞 ---- */
+  fwd(seq,pin,out){
+    let p=pin;
+    for(const el of seq){
+      el._vin=p;
+      if(el.t==='par'){
+        let o=false;
+        for(const br of el.b){ if(this.fwd(br,p,out)) o=true; }
+        p=o;
+      }else if(this.isOut(el)){
+        el._on=p;
+        const key=el.d+'|'+(el.a||'');
+        out[key]=(out[key]||false)||p;
+        p=true;
+      }else{
+        el._c=this.conduct(el);
+        p=p&&el._c;
+      }
+    }
+    return p;
+  }
+  /* ---- 反向：是否真的形成迴路（有電流） ---- */
+  back(seq,downOK){
+    let ok=downOK;
+    for(let i=seq.length-1;i>=0;i--){
+      const el=seq[i];
+      if(this.isOut(el)){ el._flow=el._vin; el._oflow=false; ok=true; }
+      else if(el.t==='par'){
+        let any=false;
+        for(const br of el.b){ if(this.back(br,ok)) any=true; }
+        el._flow=el._vin&&any; el._oflow=el._flow&&any; ok=any;
+      }else{
+        el._flow=el._vin&&el._c&&ok; el._oflow=el._flow; ok=el._c&&ok;
+      }
+    }
+    return ok;
+  }
+
+  /* ---- 收斂求解 ---- */
+  settle(){
+    for(let it=0; it<40; it++){
+      const out={};
+      const cm=this.cfg.common;
+      const gate = cm ? this.fwd(cm,true,out) : true;
+      for(const r of this.cfg.rungs) this.fwd(r.s, r.bypass?true:gate, out);
+      let chg=false;
+      for(const [key,v] of Object.entries(out)){
+        const [name,act]=key.split('|');
+        const d=this.d(name);
+        if(d.kind==='alt'){ if(d.cin!==v){d.cin=v; chg=true;} }
+        else if(d.kind==='cnt'){
+          if(act==='C'){ if(d.cin!==v){d.cin=v;chg=true;} }
+          else if(act==='R'){ if(d.rin!==v){d.rin=v;chg=true;} }
+        }
+        else if(d.kind==='keep'){
+          const nv = act==='S' ? (v?true:d.on) : act==='R' ? (v?false:d.on) : d.on;
+          if(nv!==d.on){ d.on=nv; chg=true; }
+        }
+        else if(d.on!==v){ d.on=v; chg=true; }
+      }
+      if(!chg) break;
+    }
+    for(const r of this.cfg.rungs) this.back(r.s,false);
+    if(this.cfg.common){
+      const any=this.cfg.rungs.some(r=>!r.bypass && r.s.length && r.s[0]._flow);
+      this.back(this.cfg.common,any);
+    }
+  }
+
+  timers(dt){
+    for(const d of Object.values(this.st)){
+      if(d.kind==='ton'){
+        if(d.on){ d.t=Math.min(d.T,d.t+dt); d.done=d.t>=d.T; }
+        else { d.t=0; d.done=false; }
+      }else if(d.kind==='toff'){
+        if(d.on){ d.t=0; d.held=true; }
+        else if(d.held){ d.t+=dt; if(d.t>=d.T){ d.held=false; d.t=0; } }
+      }
+    }
+  }
+  edges(){
+    let chg=false;
+    for(const d of Object.values(this.st)){
+      if(d.kind==='alt'){
+        if(d.cin && !d.pc){ d.on=!d.on; chg=true; }
+        d.pc=!!d.cin;
+      }else if(d.kind==='cnt'){
+        if(d.rin){ if(d.cnt!==0){d.cnt=0;chg=true;} }
+        else if(d.cin && !d.pc){ d.cnt++; chg=true; }
+        d.pc=!!d.cin;
+        const on=d.cnt>=d.preset;
+        if(d.on!==on){ d.on=on; chg=true; }
+      }
+    }
+    return chg;
+  }
+
+  tick(dt){
+    for(let i=this.taps.length-1;i>=0;i--){
+      const tp=this.taps[i]; tp.t-=dt;
+      if(tp.t<=0){ this.set(tp.n,false); this.taps.splice(i,1); }
+    }
+    if(this.cfg.pre) this.cfg.pre(this,dt);
+    this.settle();
+    if(dt>0){ this.timers(dt); this.settle(); }
+    if(this.edges()) this.settle();
+    if(this.cfg.post) this.cfg.post(this,dt);
+  }
+}
+
+/* =======================================================================
+   3. 階梯圖繪製
+   ======================================================================= */
+const SER=74, PAR=112, TOPY=58, COILDROP=78;
+const SVGNS='http://www.w3.org/2000/svg';
+const mk=(t,a={})=>{const e=document.createElementNS(SVGNS,t);
+  for(const [k,v] of Object.entries(a)) e.setAttribute(k,v); return e;};
+
+/* 量測：w = 串聯格數（縱向），h = 並聯分支數（橫向） */
+function measure(seq){
+  let w=0,h=1;
+  for(const el of seq){
+    if(el.t==='par'){
+      let mw=0,mh=0;
+      for(const br of el.b){ const m=measure(br); mw=Math.max(mw,m.w); mh+=m.h; }
+      el._w=mw; el._h=mh; w+=mw; h=Math.max(h,mh);
+    } else { el._w=1; el._h=1; w+=1; }
+  }
+  return {w,h};
+}
+
+function dot(g,x,y){ g.appendChild(mk('circle',{cx:x,cy:y,r:3.4,class:'jd'})); }
+
+/* ---------- 元件符號（CNS 縱向畫法） ---------- */
+function symbol(g,el,x,y,sim){
+  const A=(t,at)=>{const e=mk(t,at); g.appendChild(e); return e;};
+  const SY=(t,at,base)=>{const e=A(t,Object.assign({class:base},at)); e.dataset.b=base;
+    (el._sym=el._sym||[]).push(e); return e;};
+  const P=[]; el._paths=P; el._sym=[];
+  const T=el.t, d=sim.d(el.d), half=SER/2;
+
+  /* 線圈 / 指示燈 / 蜂鳴器 —— 圓內書寫元件名，對齊底部同一列 */
+  if(T==='coil'||T==='lamp'||T==='bz'){
+    P.push(A('line',{x1:x,y1:y-half,x2:x,y2:y-18,class:'w'}));
+    P.push(A('line',{x1:x,y1:y+18,x2:x,y2:y+half,class:'w'}));
+    if(T==='bz'){
+      el._box=A('rect',{x:x-17,y:y-16,width:34,height:32,rx:1.5,class:'coilbg'});
+      SY('line',{x1:x-21,y1:y+20,x2:x+21,y2:y-20},'sym');
+    } else {
+      el._box=A('circle',{cx:x,cy:y,r:18,class:'coilbg'});
+      if(T==='lamp'){                       /* 指示燈：⊗ */
+        el._spk=[];
+        for(const ang of [45,135,225,315]){
+          const a=ang*Math.PI/180;
+          el._spk.push(A('line',{x1:x+8.6*Math.cos(a),y1:y+8.6*Math.sin(a),
+            x2:x+17.6*Math.cos(a),y2:y+17.6*Math.sin(a),class:'sym'}));
+        }
+      }
+    }
+    const nm=el.d+(el.a?'-'+el.a:'');
+    el._nm=A('text',{x,y:y+4,class:'cin'}); el._nmb='cin';
+    el._nm.textContent=nm;
+    if(nm.length>3) el._nm.setAttribute('font-size','9');
+    A('text',{x,y:y+36,class:'sub'}).textContent=d.n;
+    return;
+  }
+
+  const isNC=(T==='nc'||T==='pnc'||T==='tnc');
+  const isTHR=/^TH/i.test(el.d);
+  let stub=6, lx=x+21;
+
+  if(isTHR){                                   /* 積熱電驛（交叉剪刀狀） */
+    stub=12; lx=x+17;
+    A('circle',{cx:x,cy:y-12,r:3.2,class:'term'});
+    A('circle',{cx:x,cy:y+12,r:3.2,class:'term'});
+    SY('line',{x1:x-10,y1:y+8,x2:x+10,y2:y-8},'sym');
+    SY('line',{x1:x-10,y1:y-8,x2:x+10,y2:y+8},'sym');
+    el._brg=A('line',{x1:x,y1:y-12,x2:x,y2:y+12,class:'brg'});
+  }
+  else if(/^(FS|LS)/.test(el.d)){              /* 浮球／極限開關：機械操作塊 */
+    stub=12; lx=x+21;
+    A('circle',{cx:x,cy:y-12,r:3.2,class:'term'});
+    A('circle',{cx:x,cy:y+12,r:3.2,class:'term'});
+    if(isNC) SY('line',{x1:x,y1:y-12,x2:x,y2:y+12},'sym');
+    else     SY('line',{x1:x+7,y1:y-12,x2:x+7,y2:y+12},'sym');
+    A('rect',{x:x-19,y:y-7,width:6,height:14,class:'act'});
+    SY('line',{x1:x-13,y1:y,x2:x-1,y2:y},'sym');
+    el._brg=A('line',{x1:x,y1:y-12,x2:x,y2:y+12,class:'brg'});
+  }
+  else if(/^COS/.test(el.d)){                  /* 切換開關：旋轉刀形接點 */
+    stub=12; lx=x+21;
+    A('circle',{cx:x,cy:y-12,r:3.2,class:'term'});
+    A('circle',{cx:x,cy:y+12,r:3.2,class:'term'});
+    SY('line',{x1:x,y1:y+12,x2:(isNC?x:x+10),y2:y-12},'sym');
+    A('path',{d:`M${x-12} ${y-5} A8 8 0 0 1 ${x-12} ${y+5}`,class:'sym'});
+    el._brg=A('line',{x1:x,y1:y-12,x2:x,y2:y+12,class:'brg'});
+  }
+  else if(T==='pno'||T==='pnc'){               /* 按鈕：端子圈 ＋ 側邊推桿 */
+    stub=12; lx=x+26;
+    A('circle',{cx:x,cy:y-12,r:3.2,class:'term'});
+    A('circle',{cx:x,cy:y+12,r:3.2,class:'term'});
+    if(isNC) SY('line',{x1:x,y1:y-12,x2:x,y2:y+12},'sym');
+    else     SY('line',{x1:x+7,y1:y-12,x2:x+7,y2:y+12},'sym');
+    SY('line',{x1:x+14,y1:y-22,x2:x+14,y2:y+1},'sym');
+    SY('line',{x1:x+6,y1:y-22,x2:x+22,y2:y-22},'sym');
+    SY('line',{x1:x+7,y1:y+1,x2:x+14,y2:y+1},'sym');
+    el._brg=A('line',{x1:x,y1:y-12,x2:x,y2:y+12,class:'brg'});
+  }
+  else if(T==='tno'||T==='tnc'){               /* 限時接點：端子圈 ＋ ▷ */
+    stub=12; lx=x+21;
+    A('circle',{cx:x,cy:y-12,r:3.2,class:'term'});
+    A('circle',{cx:x,cy:y+12,r:3.2,class:'term'});
+    A('path',{d:`M${x-21} ${y-8} L${x-8} ${y} L${x-21} ${y+8} Z`,class:'tsym'});
+    SY('line',{x1:x-8,y1:y,x2:x-1,y2:y},'sym');
+    if(isNC) SY('line',{x1:x,y1:y-12,x2:x,y2:y+12},'sym');
+    else     SY('line',{x1:x+7,y1:y-12,x2:x+7,y2:y+12},'sym');
+    el._brg=A('line',{x1:x,y1:y-12,x2:x,y2:y+12,class:'brg'});
+  }
+  else {                                        /* 一般接點：兩條粗橫棒 */
+    el._b1=SY('line',{x1:x-16,y1:y-6,x2:x+16,y2:y-6},'bar');
+    el._b2=SY('line',{x1:x-16,y1:y+6,x2:x+16,y2:y+6},'bar');
+    if(isNC) el._sl=SY('line',{x1:x-19,y1:y+12,x2:x+19,y2:y-12},'sym');
+    el._brg=A('line',{x1:x,y1:y-6,x2:x,y2:y+6,class:'brg'});
+  }
+
+  P.push(A('line',{x1:x,y1:y-half,x2:x,y2:y-stub,class:'w'}));
+  P.push(A('line',{x1:x,y1:y+stub,x2:x,y2:y+half,class:'w'}));
+
+  el._nm=A('text',{x:lx,y:y+4,class:'lblL'}); el._nmb='lblL';
+  el._nm.textContent=el.d;
+  if(el.h){
+    A('rect',{x:lx-1,y:y+9,width:37,height:13,rx:6.5,class:'tagbg',opacity:.92});
+    A('text',{x:lx+17.5,y:y+18.5,class:'tag'}).textContent=el.h;
+  }
+}
+
+/* ---------- 縱向佈置 ---------- */
+function place(g,seq,x,y0,sim,ctx,term){
+  let y=y0;
+  for(let i=0;i<seq.length;i++){
+    const el=seq[i];
+    const last = term && i===seq.length-1;
+
+    if(el.t==='par'){
+      let ty=y, by=y+el._w*SER;
+      if(last){ by=ctx.coilY+SER/2; ty=by-el._w*SER;
+        if(ty<y){ ty=y; by=y+el._w*SER; }
+        else if(ty>y) g.appendChild(mk('line',{x1:x,y1:y,x2:x,y2:ty,class:'w'}));
+      }
+      let cx=x-((el._h-1)*PAR)/2, xs=[];
+      for(const br of el.b){
+        const m=measure(br), bx=cx+((m.h-1)*PAR)/2;
+        xs.push(bx);
+        const endY=place(g,br,bx,ty,sim,ctx,last);
+        if(!last && endY<by) g.appendChild(mk('line',{x1:bx,y1:endY,x2:bx,y2:by,class:'w'}));
+        cx+=m.h*PAR;
+      }
+      const x0=Math.min(...xs), x1=Math.max(...xs);
+      el._vl=mk('line',{x1:x0,y1:ty,x2:x1,y2:ty,class:'w'}); g.appendChild(el._vl);
+      for(const bx of xs) if(Math.abs(bx-x)>1) dot(g,bx,ty);
+      if(!last){
+        el._vr=mk('line',{x1:x0,y1:by,x2:x1,y2:by,class:'w'}); g.appendChild(el._vr);
+        for(const bx of xs) if(Math.abs(bx-x)>1) dot(g,bx,by);
+      } else el._vr=null;
+      y=by;
+    } else {
+      let cy=y+SER/2;
+      if(last){ cy=ctx.coilY;
+        if(cy-SER/2>y) g.appendChild(mk('line',{x1:x,y1:y,x2:x,y2:cy-SER/2,class:'w'})); }
+      symbol(g,el,x,cy,sim);
+      y=cy+SER/2;
+    }
+  }
+  if(term) g.appendChild(mk('line',{x1:x,y1:y,x2:x,y2:ctx.bot,class:'w'}));
+  return y;
+}
+
+function fuse(g,x,y,lab){
+  g.appendChild(mk('rect',{x:x-19,y:y-7,width:38,height:14,class:'fuse'}));
+  g.appendChild(mk('line',{x1:x-19,y1:y+7,x2:x+19,y2:y-7,class:'sym'}));
+  const t=mk('text',{x,y:y-13,class:'lbl'}); t.textContent='D-F'; g.appendChild(t);
+  g.appendChild(mk('line',{x1:x-19,y1:y,x2:x-38,y2:y,class:'rail'}));
+  g.appendChild(mk('path',{d:`M${x-38} ${y-6} L${x-49} ${y} L${x-38} ${y+6} Z`,class:'arw'}));
+  const l=mk('text',{x:x-58,y:y+4,class:'lbl'}); l.textContent=lab; g.appendChild(l);
+}
+
+function buildLadder(sim){
+  const cfg=sim.cfg, host=document.getElementById('diagram');
+  host.innerHTML='';
+  let maxSer=1, cur=176, xs=[];
+  for(const r of cfg.rungs){ r._m=measure(r.s); maxSer=Math.max(maxSer,r._m.w); }
+  for(const r of cfg.rungs){ const w=Math.max(1,r._m.h)*PAR; xs.push(cur+w/2); cur+=w; }
+  const coilY=TOPY+(maxSer-0.5)*SER;
+  const bot=coilY+COILDROP;
+  const W=cur+46, H=bot+52;
+  const svg=mk('svg',{viewBox:`0 0 ${W} ${H}`,xmlns:SVGNS});
+  const g=mk('g'); svg.appendChild(g);
+
+  const cm=cfg.common, colY = cm ? bot-2.2*SER : bot;
+  cfg.rungs.forEach((r,i)=>place(g,r.s,xs[i],TOPY,sim,
+    {coilY,bot:(cm&&!r.bypass)?colY:bot},true));
+  if(cm){
+    const cx=xs[cfg.rungs.findIndex(r=>!r.bypass)];
+    const lo=Math.min(...xs.filter((x,i)=>!cfg.rungs[i].bypass));
+    const hi=Math.max(...xs.filter((x,i)=>!cfg.rungs[i].bypass));
+    cfg._col=mk('line',{x1:lo,y1:colY,x2:hi,y2:colY,class:'w'});
+    g.appendChild(cfg._col);
+    for(const x of xs) if(x>=lo&&x<=hi) dot(g,x,colY);
+    place(g,cm,cx,colY,sim,{coilY:colY+1.2*SER,bot},true);
+  }
+
+  const railA=mk('line',{x1:93,y1:TOPY,x2:W-22,y2:TOPY,class:'rail hot'});
+  const railC=mk('line',{x1:93,y1:bot,x2:W-22,y2:bot,class:'rail hot'});
+  g.appendChild(railA); g.appendChild(railC);
+  for(const x of xs){ dot(g,x,TOPY); dot(g,x,bot); }
+  fuse(g,112,TOPY,cfg.railL||'R');
+  fuse(g,112,bot,cfg.railR||'T');
+  host.appendChild(svg);
+  svg.style.width='100%'; svg.style.minWidth=W+'px'; svg.style.height='auto';
+}
+
+function paintSeq(seq,sim){
+  for(const el of seq){
+    if(el.t==='par'){
+      const c=el._flow?'w hot':(el._vin?'w volt':'w');
+      if(el._vl) el._vl.setAttribute('class',c);
+      if(el._vr) el._vr.setAttribute('class',el._flow?'w hot':'w');
+      for(const br of el.b) paintSeq(br,sim);
+      continue;
+    }
+    const flow=el._flow, volt=el._vin&&!el._flow;
+    const wc=flow?'w hot':volt?'w volt':'w';
+    if(el._paths) for(const p of el._paths) p.setAttribute('class',wc);
+    if(el._sym){ const s=flow?' hot':''; for(const n of el._sym) n.setAttribute('class',n.dataset.b+s); }
+    if(el._brg) el._brg.setAttribute('class','brg'+(el._c&&flow?' on':''));
+    if(el._box){
+      const d=sim.d(el.d);
+      const lit = (el.t==='lamp'||el.t==='bz') ? el._on : d.on;
+      el._box.setAttribute('class','coilbg'+(lit?' on':''));
+      if(el.t==='lamp'&&el.c){ const cc=C[el.c]||el.c;
+        el._box.style.fill = lit? cc : '';
+        el._box.style.stroke = lit? cc : '';
+        el._box.style.filter = lit? `drop-shadow(0 0 9px ${cc})` : 'none';
+      }
+      if(el._nm){ el._nm.setAttribute('class','cin'+(lit?' on':''));
+        el._nm.style.fill = (lit && el.t==='lamp') ? '#20160a' : ''; }
+      if(el._spk) for(const n of el._spk) n.style.stroke = (lit&&el.t==='lamp') ? '#20160a' : '';
+    } else if(el._nm) el._nm.setAttribute('class',(el._nmb||'lblL')+(flow?' hot':''));
+  }
+}
+function paintLadder(sim){
+  for(const r of sim.cfg.rungs) paintSeq(r.s,sim);
+  if(sim.cfg.common){
+    paintSeq(sim.cfg.common,sim);
+    const any=sim.cfg.rungs.some(r=>!r.bypass&&r.s.length&&r.s[0]._flow);
+    if(sim.cfg._col) sim.cfg._col.setAttribute('class',any?'w hot':'w');
+  }
+}
+
+/* =======================================================================
+   4. 側邊面板
+   ======================================================================= */
+function buildControls(sim){
+  const box=document.getElementById('controls'); box.innerHTML='';
+  const groups={};
+  for(const inp of sim.cfg.inputs){ (groups[inp.g||'操作']=groups[inp.g||'操作']||[]).push(inp); }
+  for(const [gn,list] of Object.entries(groups)){
+    const grp=document.createElement('div'); grp.className='grp';
+    const gl=document.createElement('div'); gl.className='gl'; gl.textContent=gn; grp.appendChild(gl);
+    const row=document.createElement('div'); row.className='btnrow'; grp.appendChild(row);
+    for(const inp of list){
+      if(inp.k==='mom'){
+        const b=document.createElement('button'); b.className='pb '+(inp.c||'');
+        b.innerHTML=`${inp.d}<small>${inp.n}</small>`;
+        const dn=e=>{e.preventDefault(); sim.set(inp.d,true); b.classList.add('down');};
+        const up=()=>{ sim.set(inp.d,false); b.classList.remove('down');};
+        b.addEventListener('pointerdown',dn); b.addEventListener('pointerup',up);
+        b.addEventListener('pointerleave',up); b.addEventListener('pointercancel',up);
+        row.appendChild(b); inp._el=b;
+      }else if(inp.k==='tog'){
+        const b=document.createElement('button'); b.className='pb '+(inp.c||'');
+        b.innerHTML=`${inp.d}<small>${inp.n}</small>`;
+        b.onclick=()=>sim.set(inp.d,!sim.get(inp.d));
+        row.appendChild(b); inp._el=b;
+      }else if(inp.k==='sel'){
+        const wrap=document.createElement('div'); wrap.style.width='100%';
+        const seg=document.createElement('div'); seg.className='seg';
+        for(const o of inp.opts){
+          const b=document.createElement('button'); b.textContent=o.label;
+          b.onclick=()=>{ for(const oo of inp.opts) for(const [k,v] of Object.entries(oo.set)) sim.set(k,false);
+                          for(const [k,v] of Object.entries(o.set)) sim.set(k,!!v); };
+          seg.appendChild(b); o._el=b;
+        }
+        wrap.appendChild(seg); row.appendChild(wrap);
+      }else if(inp.k==='slider'){
+        const wrap=document.createElement('div'); wrap.className='slider'; wrap.style.width='100%';
+        const r=document.createElement('input'); r.type='range'; r.min=0; r.max=100; r.step=1;
+        r.value=sim.m[inp.mk]||0;
+        const s=document.createElement('span');
+        r.oninput=()=>{ sim.m[inp.mk]=+r.value; sim.m[inp.mk+'_man']=true; };
+        wrap.appendChild(r); wrap.appendChild(s); row.appendChild(wrap);
+        inp._r=r; inp._s=s;
+      }
+    }
+    box.appendChild(grp);
+  }
+}
+function paintControls(sim){
+  for(const inp of sim.cfg.inputs){
+    if(inp.k==='tog'&&inp._el) inp._el.classList.toggle('on',sim.get(inp.d));
+    if(inp.k==='mom'&&inp._el) inp._el.classList.toggle('down',sim.get(inp.d));
+    if(inp.k==='sel') for(const o of inp.opts){
+      const on=Object.entries(o.set).every(([k,v])=>sim.get(k)===!!v);
+      o._el.classList.toggle('on',on);
+    }
+    if(inp.k==='slider'&&inp._r){
+      if(document.activeElement!==inp._r) inp._r.value=Math.round(sim.m[inp.mk]||0);
+      inp._s.textContent=(inp.fmt?inp.fmt(sim.m[inp.mk]||0):Math.round(sim.m[inp.mk]||0)+'%');
+    }
+  }
+}
+function buildLamps(sim){
+  const box=document.getElementById('lamps'); box.innerHTML='';
+  (sim.cfg.lampList||[]).forEach(L=>{
+    const w=document.createElement('div'); w.className='lmp';
+    w.innerHTML=`<div class="bulb"></div><div class="nm">${L.d}</div><div class="cn">${L.n}</div>`;
+    box.appendChild(w); L._el=w;
+  });
+}
+function paintLamps(sim){
+  (sim.cfg.lampList||[]).forEach(L=>{
+    const on=sim.get(L.d); L._el.classList.toggle('on',on);
+    const b=L._el.querySelector('.bulb'); const cc=C[L.c]||L.c;
+    b.style.background = on? cc : '';
+    b.style.borderColor = on? cc : '';
+    b.style.boxShadow = on? `0 0 14px ${cc},0 0 4px ${cc} inset` : 'none';
+  });
+}
+function buildDevs(sim){
+  const box=document.getElementById('devs'); box.innerHTML='';
+  sim.cfg._dl=[];
+  for(const [k,v] of Object.entries(sim.cfg.devices)){
+    if(v.k==='lamp'||v.k==='bz'||v.k==='in'||v.hide) continue;
+    const e=document.createElement('div'); e.className='dv';
+    e.innerHTML=`<div class="n">${k}</div><div class="s">${v.n||''}</div>`+
+      ((v.k==='ton'||v.k==='toff'||v.k==='cnt')?'<div class="bar"><i></i></div>':'');
+    box.appendChild(e); sim.cfg._dl.push({k,v,e,bar:e.querySelector('.bar i')});
+  }
+}
+function paintDevs(sim){
+  for(const it of (sim.cfg._dl||[])){
+    const d=sim.d(it.k);
+    let on=d.on;
+    if(d.kind==='toff') on=d.on||d.held;
+    if(d.kind==='cnt') on=d.cnt>0;
+    it.e.classList.toggle('on',on);
+    if(it.bar){
+      if(d.kind==='cnt'){ it.bar.style.width=Math.min(100,d.cnt/d.preset*100)+'%';
+        it.e.querySelector('.s').textContent=`計數 ${d.cnt}/${d.preset}`; }
+      else{ const p=d.kind==='toff' ? (d.held? (1-d.t/d.T)*100 : 0) : d.t/d.T*100;
+        it.bar.style.width=Math.max(0,Math.min(100,p))+'%'; }
+    }
+  }
+}
+
+/* =======================================================================
+   5. 導引流程
+   ======================================================================= */
+const G={sim:null,cfg:null,sc:0,step:-1,play:false,timer:0,phase:'idle',view:'all'};
+
+function buildScen(){
+  const sel=document.getElementById('scen'); sel.innerHTML='';
+  (G.cfg.scenarios||[]).forEach((s,i)=>{
+    const o=document.createElement('option'); o.value=i; o.textContent=(i+1)+'. '+s.name; sel.appendChild(o);
+  });
+  sel.value=G.sc; renderSteps();
+}
+function renderSteps(){
+  const ol=document.getElementById('steplist'); ol.innerHTML='';
+  const sc=(G.cfg.scenarios||[])[G.sc]; if(!sc) return;
+  sc.steps.forEach((st,i)=>{
+    const li=document.createElement('li'); li.textContent=st.t;
+    li.className = i===G.step?'on':(i<G.step?'done':'');
+    li.onclick=()=>{ gotoStep(i); };
+    ol.appendChild(li);
+  });
+  const cur=ol.querySelector('li.on'); if(cur) cur.scrollIntoView({block:'nearest'});
+}
+function gotoStep(i){
+  const sc=G.cfg.scenarios[G.sc]; if(!sc) return;
+  if(i<=0){ G.sim.reset(); if(sc.setup) sc.setup(G.sim); G.step=-1; }
+  if(i<G.step){ G.sim.reset(); if(sc.setup) sc.setup(G.sim); G.step=-1;
+    for(let k=0;k<i;k++){ runStep(sc.steps[k]); settleFor(sc.steps[k].skip||1.6); } }
+  else { for(let k=G.step+1;k<i;k++){ runStep(sc.steps[k]); settleFor(sc.steps[k].skip||1.6); } }
+  G.step=i; runStep(sc.steps[i]);
+  document.getElementById('narr').innerHTML=`<b>步驟 ${i+1}</b> ｜ ${sc.steps[i].t}`;
+  G.timer=0; G.phase='wait'; renderSteps();
+}
+function runStep(st){ if(st.a) st.a(G.sim); }
+function settleFor(sec){ let t=0; while(t<sec){ G.sim.tick(0.05); t+=0.05; } }
+function nextStep(){
+  const sc=G.cfg.scenarios[G.sc]; if(!sc) return;
+  if(G.step>=sc.steps.length-1){ G.play=false; syncPlay();
+    document.getElementById('narr').innerHTML='<b>情境結束</b> ｜ 可切換其他情境，或用操作盤自行操作。'; return; }
+  gotoStep(G.step+1);
+}
+function prevStep(){ if(G.step>0) gotoStep(G.step-1); else gotoStep(0); }
+function syncPlay(){ const b=document.getElementById('bPlay');
+  b.textContent=G.play?'❚❚ 暫停':'▶ 自動播放'; b.classList.toggle('play',!G.play); }
+
+/* =======================================================================
+   6. 主流程
+   ======================================================================= */
+const CIRCUITS=[];
+
+
+/* ===================== 主電路（動力電路）繪圖庫 ===================== */
+const PW={
+  wire(x1,y1,x2,y2,hot){ return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"
+      stroke="${hot?C.red:C.wr}" stroke-width="${hot?3.2:2.2}" stroke-linecap="round"/>`; },
+  dash(x1,y1,x2,y2){ return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"
+      stroke="${C.mt2}" stroke-width="1.6" stroke-dasharray="6 4"/>`; },
+  dot(x,y){ return `<circle cx="${x}" cy="${y}" r="3.4" fill="${C.railc||C.mt2}"/>`; },
+  txt(x,y,t,c,sz,anc){ return `<text x="${x}" y="${y}" fill="${c||C.mu}" font-size="${sz||11}"
+      text-anchor="${anc||'start'}" font-family="monospace">${t}</text>`; },
+  /* 端子台 */
+  tb(x,y,w,n,lab,pins){
+    let o=`<rect x="${x}" y="${y}" width="${w}" height="18" rx="2" fill="${C.sf}"
+        stroke="${C.ln}" stroke-width="1.8"/>`;
+    for(let i=0;i<n;i++){ const px=x+w*(i+0.5)/n;
+      o+=`<circle cx="${px}" cy="${y+9}" r="3.4" fill="none" stroke="${C.symc}" stroke-width="1.6"/>`;
+      if(pins&&pins[i]) o+=PW.txt(px+5,y+6,pins[i],C.dm,9); }
+    o+=PW.txt(x+w+7,y+13,lab,C.mu,10.5); return o;
+  },
+  /* 無熔線斷路器 NFB（三極） */
+  nfb(x,y,xs,on){
+    let o='';
+    for(const px of xs){
+      o+=`<path d="M${px-11} ${y} A11 11 0 0 1 ${px+11} ${y}" fill="none"
+           stroke="${on?C.red:C.symc}" stroke-width="2.2"/>`
+       + `<circle cx="${px-11}" cy="${y}" r="3" fill="none" stroke="${C.symc}" stroke-width="1.6"/>`
+       + `<circle cx="${px+11}" cy="${y}" r="3" fill="none" stroke="${C.symc}" stroke-width="1.6"/>`;
+    }
+    o+=PW.dash(xs[0],y-11,xs[xs.length-1],y-11);
+    o+=PW.txt(xs[xs.length-1]+26,y+4,'NFB',C.mu,11); return o;
+  },
+  /* 電磁接觸器主接點（可指定極數） */
+  mc(x,y,xs,on,lab,labSide){
+    let o='';
+    for(const px of xs){
+      o+=`<line x1="${px-13}" y1="${y-5}" x2="${px+13}" y2="${y-5}"
+            stroke="${on?C.red:C.symc}" stroke-width="4.2"/>`
+       + `<line x1="${px-13}" y1="${y+5}" x2="${px+13}" y2="${y+5}"
+            stroke="${on?C.red:C.symc}" stroke-width="4.2"/>`;
+      if(on) o+=`<line x1="${px}" y1="${y-5}" x2="${px}" y2="${y+5}" stroke="${C.red}" stroke-width="4.2"/>`;
+    }
+    const lx = labSide==='L' ? xs[0]-20 : xs[xs.length-1]+20;
+    o+=PW.txt(lx,y+4,lab,on?C.red:C.mu,11,labSide==='L'?'end':'start'); return o;
+  },
+  /* 積熱電驛 TH-RY（熱動元件） */
+  thry(x,y,xs,trip,lab){
+    let o='';
+    for(const px of xs){
+      o+=`<path d="M${px-8} ${y+9} L${px-8} ${y-4} L${px+3} ${y-4}" fill="none"
+           stroke="${trip?C.amb:C.symc}" stroke-width="2.2"/>`;
+    }
+    o+=PW.txt(xs[xs.length-1]+16,y+4,lab||'TH-RY',trip?C.amb:C.mu,11); return o;
+  },
+  /* 電動機 */
+  motor(x,y,run,lab,hp){
+    return `<circle cx="${x}" cy="${y}" r="17" fill="${run?C.hotbg:C.sf}"
+        stroke="${run?C.red:C.ln}" stroke-width="2.2"/>`
+      + PW.txt(x,y+5,lab||'M',run?C.red:C.mu,12,'middle')
+      + (hp?PW.txt(x,y+34,hp,C.dm,10,'middle'):'');
+  },
+  /* 接地 */
+  gnd(x,y){ return `<line x1="${x-11}" y1="${y}" x2="${x+11}" y2="${y}" stroke="${C.okfg}" stroke-width="2.2"/>`
+    + `<line x1="${x-7}" y1="${y+4}" x2="${x+7}" y2="${y+4}" stroke="${C.okfg}" stroke-width="2"/>`
+    + `<line x1="${x-3}" y1="${y+8}" x2="${x+3}" y2="${y+8}" stroke="${C.okfg}" stroke-width="2"/>`; },
+  /* 熔絲 D-F */
+  df(x,y,lab){ return `<rect x="${x-16}" y="${y-7}" width="32" height="14" fill="${C.sf}"
+      stroke="${C.symc}" stroke-width="1.6"/>`
+    + `<line x1="${x-16}" y1="${y+7}" x2="${x+16}" y2="${y-7}" stroke="${C.symc}" stroke-width="1.6"/>`
+    + PW.txt(x,y-12,lab||'D-F',C.dm,9.5,'middle'); },
+  /* 虛線框（電磁開關 MS / 盤內元件） */
+  box(x,y,w,h,lab){ return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none"
+      stroke="${C.mt2}" stroke-width="1.5" stroke-dasharray="7 5"/>`
+    + PW.txt(x+w+6,y+h/2,lab,C.mu,10.5); },
+  /* 三相母線（R S T 縱走） */
+  bus3(xs,y1,y2,hot){ return xs.map((x,i)=>PW.wire(x,y1,x,y2,hot)).join(''); },
+  head(xs,y,labs){ return PW.tb(xs[0]-22,y-9,(xs[2]-xs[0])+44,3,'TB1',labs)
+    + PW.txt(xs[0]-24,y-22,'3φ 3W 220V',C.mu,11); }
+};
+
+/* 三相電源頭（TB1 → NFB），回傳 SVG 與下一個 y */
+function pwrHead(xs,y,live){
+  return PW.head(xs,y,['R','S','T'])
+    + PW.bus3(xs,y+9,y+44,live)
+    + PW.nfb(0,y+44,xs,live)
+    + PW.bus3(xs,y+55,y+88,live);
+}
+
+/* ---- 第1、2題：正反轉兼 Y-Δ 主電路 ---- */
+function powerYD(S,revLbl){
+  const xs=[54,92,130], F=S.get('MCF'), R=S.get('MCR'), Sy=S.get('MCS'), D=S.get('MCD');
+  const live=F||R, run=(F||R)&&(Sy||D);
+  let o=pwrHead(xs,32,true);
+  o+=PW.mc(0,150,xs,F,'MCF','R')+PW.wire(xs[0],120,xs[0],145,true)
+    +PW.wire(xs[1],120,xs[1],145,true)+PW.wire(xs[2],120,xs[2],145,true);
+  const rx=[190,228,266];
+  o+=PW.wire(xs[0],126,rx[2],126,true)+PW.wire(rx[2],126,rx[2],145,true)
+    +PW.wire(xs[2],132,rx[0],132,true)+PW.wire(rx[0],132,rx[0],145,true)
+    +PW.wire(xs[1],138,rx[1],138,true)+PW.wire(rx[1],138,rx[1],145,true)
+    +PW.mc(0,150,rx,R,'MCR','R');
+  o+=PW.bus3(xs,155,196,live)+PW.bus3(rx,155,180,R);
+  o+=PW.wire(rx[0],180,xs[0],180,R)+PW.wire(rx[1],180,xs[1],180,R)+PW.wire(rx[2],180,xs[2],180,R);
+  o+=PW.thry(0,206,xs,S.get('THR'),'TH-RY')+PW.bus3(xs,216,240,live&&!S.get('THR'));
+  o+=PW.tb(xs[0]-22,240,(xs[2]-xs[0])+44,3,'TB2',['U','V','W']);
+  o+=PW.motor(92,300,run,'M','15HP')+PW.gnd(30,300);
+  o+=PW.wire(30,258,30,300,false);
+  for(let i=0;i<3;i++) o+=PW.dash(xs[i],258,86+i*6,285);
+  o+=PW.tb(xs[0]-22,342,(xs[2]-xs[0])+44,3,'TB2',['X','Y','Z']);
+  for(let i=0;i<3;i++) o+=PW.dash(86+i*6,317,xs[i],342);
+  const dx=[190,228,266];
+  o+=PW.mc(0,300,dx,D,'MCD','R');
+  o+=PW.wire(xs[2],276,dx[0],276,live)+PW.wire(dx[0],276,dx[0],295,live)
+    +PW.wire(xs[1],270,dx[1],270,live)+PW.wire(dx[1],270,dx[1],295,live)
+    +PW.wire(xs[0],264,dx[2],264,live)+PW.wire(dx[2],264,dx[2],295,live)
+    +PW.wire(xs[0],258,xs[0],264,live)+PW.wire(xs[1],258,xs[1],270,live)
+    +PW.wire(xs[2],258,xs[2],276,live);
+  o+=PW.wire(dx[0],305,dx[0],360,D)+PW.wire(dx[1],305,dx[1],356,D)+PW.wire(dx[2],305,dx[2],352,D);
+  o+=PW.wire(dx[0],360,xs[0]+4,360,D)+PW.wire(dx[1],356,xs[1]+4,356,D)+PW.wire(dx[2],352,xs[2]+4,352,D);
+  o+=PW.mc(0,406,xs,Sy,'MCS','L');
+  o+=PW.bus3(xs,360,401,Sy);
+  o+=PW.wire(xs[0],416,xs[0],432,Sy)+PW.wire(xs[2],416,xs[2],432,Sy)
+    +PW.wire(xs[0],432,xs[2],432,Sy)+PW.wire(xs[1],416,xs[1],432,Sy);
+  o+=PW.txt(300,406,Sy?'Y 點短接':'',C.red,10.5);
+  return `<svg viewBox="0 0 330 470" xmlns="http://www.w3.org/2000/svg">${o}</svg>`;
+}
+
+/* ---- 第3、4題：兩台電動機主電路 ---- */
+function power2M(S,hp){
+  const xs=[54,92,130], zs=[210,248,286];
+  const a=S.get('MC1'), b=S.get('MC2');
+  let o=pwrHead(xs,32,true);
+  o+=PW.wire(xs[0],120,zs[0],120,true)+PW.wire(xs[1],126,zs[1],126,true)
+    +PW.wire(xs[2],132,zs[2],132,true);
+  o+=PW.bus3(zs,120,170,true)+PW.bus3(xs,120,170,true);
+  o+=PW.box(30,168,124,116,'MS1')+PW.box(186,168,124,116,'MS2');
+  o+=PW.mc(0,192,xs,a,'MC1','L')+PW.mc(0,192,zs,b,'MC2','R');
+  o+=PW.bus3(xs,197,246,a)+PW.bus3(zs,197,246,b);
+  o+=PW.thry(0,252,xs,S.get('THR1'),'')+PW.thry(0,252,zs,S.get('THR2'),'');
+  o+=PW.txt(xs[2]+16,262,'TH-RY1',S.get('THR1')?C.amb:C.dm,10)
+    +PW.txt(zs[2]+16,262,'TH-RY2',S.get('THR2')?C.amb:C.dm,10);
+  const A=a&&!S.get('THR1'), B=b&&!S.get('THR2');
+  o+=PW.bus3(xs,262,300,A)+PW.bus3(zs,262,300,B);
+  o+=PW.tb(xs[0]-22,300,(xs[2]-xs[0])+44,3,'TB2')+PW.tb(zs[0]-22,300,(zs[2]-zs[0])+44,3,'TB5');
+  o+=PW.motor(92,368,A,'M1',hp)+PW.motor(248,368,B,'M2',hp);
+  for(let i=0;i<3;i++){ o+=PW.dash(xs[i],318,86+i*6,352)+PW.dash(zs[i],318,242+i*6,352); }
+  o+=PW.gnd(28,352)+PW.wire(28,318,28,352,false)
+    +PW.gnd(184,352)+PW.wire(184,318,184,352,false);
+  return `<svg viewBox="0 0 350 420" xmlns="http://www.w3.org/2000/svg">${o}</svg>`;
+}
+
+/* ---- 第5題：沖床機 ＋ 直流煞車主電路 ---- */
+function power5(S){
+  const xs=[54,92,130], M=S.get('MC'), B=S.get('MCB');
+  let o=pwrHead(xs,32,true);
+  o+=PW.mc(0,178,xs,M,'MC','L')+PW.bus3(xs,120,173,true)+PW.bus3(xs,183,236,M);
+  o+=PW.thry(0,242,xs,S.get('THR'),'TH-RY');
+  const run=M&&!S.get('THR');
+  o+=PW.bus3(xs,252,290,run)+PW.tb(xs[0]-22,290,(xs[2]-xs[0])+44,3,'TB2');
+  o+=PW.motor(92,352,run,'M','3HP')+PW.gnd(28,342)+PW.wire(28,308,28,342,false);
+  for(let i=0;i<3;i++) o+=PW.dash(xs[i],308,86+i*6,336);
+  /* 直流煞車支路 */
+  const bx=232;
+  o+=PW.wire(xs[2],126,bx,126,true)+PW.wire(bx,126,bx,140,true)+PW.df(bx,150,'D-F1')
+    +PW.wire(bx,160,bx,176,true);
+  o+=PW.mc(0,182,[bx],B,'MCB','R')+PW.wire(bx,188,bx,204,B);
+  o+=PW.tb(bx-40,204,80,2,'TB6');
+  o+=PW.box(bx-46,228,92,52,'Tr');
+  o+=`<path d="M${bx-30} 244 q7 -10 14 0 q7 -10 14 0 q7 -10 14 0" fill="none"
+        stroke="${B?C.red:C.symc}" stroke-width="2"/>`
+    +`<path d="M${bx-30} 266 q7 -10 14 0 q7 -10 14 0 q7 -10 14 0" fill="none"
+        stroke="${B?C.red:C.symc}" stroke-width="2"/>`
+    +PW.wire(bx-30,222,bx-30,240,B)+PW.wire(bx+16,222,bx+16,240,B);
+  o+=PW.box(bx-30,296,60,56,'REC')
+    +`<path d="M${bx} 300 L${bx+26} 324 L${bx} 348 L${bx-26} 324 Z" fill="none"
+        stroke="${B?C.red:C.symc}" stroke-width="1.8"/>`
+    +`<path d="M${bx-7} 318 L${bx+7} 324 L${bx-7} 330 Z" fill="${B?C.red:C.symc}"/>`;
+  o+=PW.wire(bx-30,270,bx-30,290,B)+PW.wire(bx-30,290,bx,290,B)+PW.wire(bx,290,bx,300,B);
+  o+=PW.wire(bx,348,bx,364,B)+PW.tb(bx-40,364,80,2,'TB5');
+  o+=PW.wire(bx-20,382,bx-20,398,B)+PW.wire(bx+20,382,bx+20,398,B);
+  o+=PW.mc(0,404,[bx-20],B,'','R')+PW.mc(0,404,[bx+20],B,'MCB','R');
+  o+=PW.wire(bx-20,410,bx-20,428,B)+PW.wire(bx+20,410,bx+20,428,B);
+  o+=PW.wire(bx-20,428,xs[0],428,B)+PW.wire(xs[0],428,xs[0],308,B&&false);
+  o+=PW.txt(bx-46,446,B?'直流煞車電流注入定子':'',C.red,10);
+  return `<svg viewBox="0 0 300 470" xmlns="http://www.w3.org/2000/svg">${o}</svg>`;
+}
+
+/* ---- 第6題：大門電動機正反轉主電路 ---- */
+function power6(S){
+  const xs=[54,92,130], rx=[190,228,266];
+  const F=S.get('MCF'), R=S.get('MCR');
+  let o=pwrHead(xs,32,true);
+  o+=PW.mc(0,150,xs,F,'MCF','L')+PW.bus3(xs,120,145,true);
+  o+=PW.wire(xs[0],126,rx[2],126,true)+PW.wire(rx[2],126,rx[2],145,true)
+    +PW.wire(xs[2],132,rx[0],132,true)+PW.wire(rx[0],132,rx[0],145,true)
+    +PW.wire(xs[1],138,rx[1],138,true)+PW.wire(rx[1],138,rx[1],145,true)
+    +PW.mc(0,150,rx,R,'MCR','R');
+  o+=PW.bus3(xs,155,200,F)+PW.bus3(rx,155,182,R);
+  o+=PW.wire(rx[0],182,xs[0],182,R)+PW.wire(rx[1],182,xs[1],182,R)+PW.wire(rx[2],182,xs[2],182,R);
+  o+=PW.thry(0,208,xs,S.get('THR'),'TH-RY');
+  const run=(F||R)&&!S.get('THR')&&!S.get('EMS');
+  o+=PW.bus3(xs,218,256,run)+PW.tb(xs[0]-22,256,(xs[2]-xs[0])+44,3,'TB2');
+  o+=PW.motor(92,320,run,'M','1HP')+PW.gnd(28,310)+PW.wire(28,274,28,310,false);
+  for(let i=0;i<3;i++) o+=PW.dash(xs[i],274,86+i*6,304);
+  o+=PW.txt(150,320,F?'▶ 正轉（開門）':R?'◀ 反轉（關門）':'停止',run?C.red:C.dm,11);
+  return `<svg viewBox="0 0 320 370" xmlns="http://www.w3.org/2000/svg">${o}</svg>`;
+}
+
+/* ---------- 共用場景繪圖 ---------- */
+function motorSVG(sim,{dir,mode,label}){
+  const a=sim.m.ang||0, run=dir!==0;
+  const spokes=[0,60,120,240,300,180].map(o=>{
+    const r=(a+o)*Math.PI/180;
+    return `<line x1="60" y1="52" x2="${60+26*Math.cos(r)}" y2="${52+26*Math.sin(r)}"
+      stroke="${run?C.amb:C.mt2}" stroke-width="3" stroke-linecap="round"/>`;
+  }).join('');
+  const wind = mode==='Y'
+    ? `<g stroke="${C.blu}" stroke-width="2.4" fill="none">
+         <line x1="205" y1="26" x2="205" y2="50"/><line x1="205" y1="50" x2="184" y2="72"/>
+         <line x1="205" y1="50" x2="226" y2="72"/>
+         <circle cx="205" cy="50" r="3.5" fill="${C.blu}"/></g>
+       <text x="205" y="94" fill="${C.blu}" font-size="12" text-anchor="middle" font-family="monospace">Y 接線啟動</text>`
+    : mode==='D'
+    ? `<g stroke="${C.red}" stroke-width="2.4" fill="none">
+         <path d="M205 26 L226 68 L184 68 Z"/></g>
+       <text x="205" y="94" fill="${C.red}" font-size="12" text-anchor="middle" font-family="monospace">Δ 接線運轉</text>`
+    : `<text x="205" y="60" fill="${C.dm}" font-size="12" text-anchor="middle">未激磁</text>`;
+  const arrow = run
+    ? `<path d="${dir>0?'M96 30 A34 34 0 0 1 96 74':'M24 30 A34 34 0 0 0 24 74'}"
+        stroke="${C.okfg}" stroke-width="2.5" fill="none" marker-end="url(#ah)"/>` : '';
+  return `<svg viewBox="0 0 260 112">
+    <defs><marker id="ah" markerWidth="7" markerHeight="7" refX="4" refY="3.5" orient="auto">
+      <path d="M0 0 L7 3.5 L0 7 Z" fill="${C.okfg}"/></marker></defs>
+    <circle cx="60" cy="52" r="32" fill="${C.sf}" stroke="${run?C.amb:C.ln}" stroke-width="2.5"/>
+    ${spokes}<circle cx="60" cy="52" r="6" fill="${C.bg}" stroke="${C.mt2}" stroke-width="2"/>
+    ${arrow}
+    <text x="60" y="106" fill="${run?C.amb:C.dm}" font-size="12" text-anchor="middle"
+      font-family="monospace">${label}</text>
+    <line x1="140" y1="14" x2="140" y2="98" stroke="${C.div}"/>
+    ${wind}</svg>`;
+}
+
+/* =====================  第 1 題  ===================== */
+CIRCUITS.push({
+  tab:'1 · 正反轉兼Y-Δ',
+  title:'第1題　電動機正反轉兼 Y-Δ 啟動控制電路',
+  desc:'以 <b>FWD / REV</b> 選擇轉向，接觸器 MCS 先做 Y 接線降壓啟動，限時電驛 TR 計時到後切換為 MCD 的 Δ 接線全壓運轉。注意 MCF↔MCR、MCS↔MCD 兩組互鎖。',
+  railL:'R', railR:'T',
+  devices:{
+    FWD:{k:'in',n:'正轉按鈕'}, REV:{k:'in',n:'反轉按鈕'}, OFF:{k:'in',n:'停止按鈕'},
+    THR:{k:'in',n:'積熱電驛'},
+    MCF:{k:'relay',n:'正轉接觸器'}, MCR:{k:'relay',n:'反轉接觸器'},
+    MCS:{k:'relay',n:'Y 接線'},     MCD:{k:'relay',n:'Δ 接線'},
+    TR:{k:'ton',n:'Y-Δ 切換',T:3.5},
+    GL:{k:'lamp',n:'停止'}, YL:{k:'lamp',n:'Y 啟動'}, RL:{k:'lamp',n:'Δ 運轉'}, BZ:{k:'bz',n:'蜂鳴器'}
+  },
+  inputs:[
+    {d:'FWD',n:'正轉',k:'mom',c:'grn'},{d:'REV',n:'反轉',k:'mom',c:'grn'},
+    {d:'OFF',n:'停止',k:'mom',c:'red'},
+    {d:'THR',n:'過載跳脫',k:'tog',c:'ylw',g:'故障模擬'}
+  ],
+  lampList:[{d:'GL',n:'停止',c:'okfg'},{d:'YL',n:'Y啟動',c:'ylw'},
+            {d:'RL',n:'Δ運轉',c:'red'},{d:'BZ',n:'蜂鳴器',c:'org'}],
+  rungs:[
+    {s:[no('THR'),bz('BZ')],bypass:1},
+    {s:[pnc('OFF'),par([pno('FWD')],[no('MCF','自保')]),nc('MCR','互鎖'),coil('MCF')]},
+    {s:[pnc('OFF'),par([pno('REV')],[no('MCR','自保')]),nc('MCF','互鎖'),coil('MCR')]},
+    {s:[par([no('MCF')],[no('MCR')]),par([tnc('TR'),nc('MCD','互鎖'),coil('MCS')],[coil('TR')])]},
+    {s:[par([no('MCF')],[no('MCR')]),tno('TR'),nc('MCS','互鎖'),coil('MCD')]},
+    {s:[no('MCS'),lamp('YL','ylw')]},
+    {s:[no('MCD'),lamp('RL','red')]},
+    {s:[nc('MCF'),nc('MCR'),lamp('GL','okfg')],bypass:1}
+  ],
+  common:[nc('THR')],
+  power(S){ return powerYD(S); },
+  post(S,dt){
+    const run=S.get('MCS')||S.get('MCD');
+    const sp=S.get('MCD')?360:S.get('MCS')?150:0;
+    const d=S.get('MCF')?1:S.get('MCR')?-1:0;
+    S.m.ang=((S.m.ang||0)+sp*d*dt)%360;
+  },
+  scene(S){
+    const d=S.get('MCF')?1:S.get('MCR')?-1:0;
+    const mode=S.get('MCS')?'Y':S.get('MCD')?'D':'-';
+    const lab=d===0?'停止':(d>0?'正轉 FWD':'反轉 REV');
+    return motorSVG(S,{dir:(S.get('MCS')||S.get('MCD'))?d:0,mode,label:lab});
+  },
+  scenarios:[
+    {name:'正轉 Y-Δ 啟動',intro:'觀察 FWD → Y 啟動 → TR 計時 → Δ 運轉 → OFF 停止 的完整分解。',
+     steps:[
+      {t:'電路初始，除 G 亮外，其餘皆不動作。',hold:1.4},
+      {t:'2-1　按下 FWD，MCF 動作且自保持，G 滅。',a:S=>S.tap('FWD',.5),hold:2},
+      {t:'2-2　同時 MCS 動作、Y 亮，電動機以 Y 接線啟動（注意 MCS↔MCD 互鎖）。',hold:1.8},
+      {t:'2-3　同時 TR 受電並開始計時…',hold:1.6,until:S=>S.d('TR').t>1},
+      {t:'3　TR 計時時間到，接點動作：MCS 復歸、Y 滅；MCD 動作、R 亮，電動機以 Δ 接線運轉。',
+       hold:2.6,until:S=>S.get('MCD')},
+      {t:'4　按下 OFF，所有動作均停止，G 亮，電路恢復初始狀態。',a:S=>S.tap('OFF',.5),hold:2}
+     ]},
+    {name:'正轉中 TH-RY 跳脫',
+     steps:[
+      {t:'先讓電動機正轉並進入 Δ 運轉。',a:S=>S.tap('FWD',.5),hold:4.5,until:S=>S.get('MCD')},
+      {t:'5　運轉中過載，TH-RY 跳脫 → 所有動作均停止，G 亮，BZ 響。',a:S=>S.set('THR',true),hold:2.6},
+      {t:'6　故障排除後將 TH-RY 復歸，BZ 停響，恢復成初始狀態。',a:S=>S.set('THR',false),hold:2}
+     ]},
+    {name:'反轉 Y-Δ 啟動',
+     steps:[
+      {t:'7　電路初始，除 G 亮外，其餘皆不動作。',hold:1.4},
+      {t:'8-1　按下 REV，MCR 動作且自保持，G 滅（MCF 的 b 接點形成互鎖）。',a:S=>S.tap('REV',.5),hold:2},
+      {t:'8-2　同時 MCS 動作、Y 亮，電動機以 Y 接線啟動。',hold:1.8},
+      {t:'8-3　同時 TR 受電並開始計時…',hold:1.6,until:S=>S.d('TR').t>1},
+      {t:'9　TR 計時到，MCS 復歸、Y 滅，MCD 動作、R 亮，電動機以 Δ 接線運轉。',hold:2.6,until:S=>S.get('MCD')},
+      {t:'10　按下 OFF，所有動作停止，G 亮，恢復初始狀態。',a:S=>S.tap('OFF',.5),hold:2}
+     ]},
+    {name:'反轉中 TH-RY 跳脫',
+     steps:[
+      {t:'先讓電動機反轉並進入 Δ 運轉。',a:S=>S.tap('REV',.5),hold:4.5,until:S=>S.get('MCD')},
+      {t:'11　運轉中過載，TH-RY 跳脫，所有動作停止，G 亮、BZ 響。',a:S=>S.set('THR',true),hold:2.6},
+      {t:'12　故障排除後將 TH-RY 復歸，BZ 停響，電路恢復成初始狀態。',a:S=>S.set('THR',false),hold:2}
+     ]}
+  ]
+});
+
+/* =====================  第 2 題  ===================== */
+CIRCUITS.push({
+  tab:'2 · 瞬時停電保護',
+  title:'第2題　電動機正反轉兼 Y-Δ 啟動附瞬時停電保護控制電路',
+  desc:'在第1題基礎上加入 <b>KR 保持電驛</b>（記憶轉向）、<b>TR2 延時復歸</b>（瞬停後的復電視窗）與 <b>TR3</b>（OFF 後的鎖定時間）。Δ 運轉中按 EMS，若在 T2 內放開就自動重新啟動；超過 T2 或按 OFF 則不再復歸。',
+  railL:'R', railR:'T',
+  devices:{
+    FWD:{k:'in',n:'正轉按鈕'},REV:{k:'in',n:'反轉按鈕'},OFF:{k:'in',n:'停止按鈕'},
+    EMS:{k:'in',n:'緊急停止'},
+    MCF:{k:'relay',n:'正轉接觸器'},MCR:{k:'relay',n:'反轉接觸器'},
+    MCS:{k:'relay',n:'Y 接線'},MCD:{k:'relay',n:'Δ 接線'},
+    KR:{k:'keep',n:'轉向記憶'},
+    TR1:{k:'ton',n:'Y-Δ 切換',T:3.5},
+    TR2:{k:'toff',n:'復電視窗 t2',T:4},
+    TR3:{k:'toff',n:'停止鎖定 t3',T:4},
+    GL:{k:'lamp',n:'停止'},R2:{k:'lamp',n:'Y 啟動'},
+    R1:{k:'lamp',n:'正轉Δ'},R3:{k:'lamp',n:'反轉Δ'}
+  },
+  inputs:[
+    {d:'FWD',n:'正轉',k:'mom',c:'grn'},{d:'REV',n:'反轉',k:'mom',c:'grn'},
+    {d:'OFF',n:'停止',k:'mom',c:'red'},
+    {d:'EMS',n:'緊急停止(可長按)',k:'tog',c:'red',g:'保持型按鈕'}
+  ],
+  lampList:[{d:'GL',n:'停止',c:'okfg'},{d:'R2',n:'Y啟動',c:'ylw'},
+            {d:'R1',n:'正轉Δ',c:'red'},{d:'R3',n:'反轉Δ',c:'blu'}],
+  rungs:[
+    {s:[pnc('EMS'),tnc('TR3','鎖定'),par([pno('FWD')],[no('MCF','自保')],[tno('TR2'),no('KR','復電')]),nc('MCR','互鎖'),coil('MCF')]},
+    {s:[pnc('EMS'),tnc('TR3','鎖定'),par([pno('REV')],[no('MCR','自保')],[tno('TR2'),nc('KR','復電')]),nc('MCF','互鎖'),coil('MCR')]},
+    {s:[pno('FWD'),coil('KR','S')]},
+    {s:[pno('REV'),coil('KR','R')]},
+    {s:[par([no('MCF')],[no('MCR')]),par([tnc('TR1'),nc('MCD','互鎖'),coil('MCS')],[coil('TR1')])]},
+    {s:[par([no('MCF')],[no('MCR')]),tno('TR1'),nc('MCS','互鎖'),coil('MCD')]},
+    {s:[no('MCD'),coil('TR2')]},
+    {s:[pno('OFF'),coil('TR3')]},
+    {s:[nc('MCF'),nc('MCR'),lamp('GL','okfg')]},
+    {s:[no('MCS'),lamp('R2','ylw')]},
+    {s:[no('MCD'),no('MCF'),lamp('R1','red')]},
+    {s:[no('MCD'),no('MCR'),lamp('R3','blu')]}
+  ],
+  power(S){ return powerYD(S); },
+  post(S,dt){
+    const sp=S.get('MCD')?360:S.get('MCS')?150:0;
+    const d=S.get('MCF')?1:S.get('MCR')?-1:0;
+    S.m.ang=((S.m.ang||0)+sp*d*dt)%360;
+  },
+  scene(S){
+    const d=S.get('MCF')?1:S.get('MCR')?-1:0;
+    const mode=S.get('MCS')?'Y':S.get('MCD')?'D':'-';
+    const kr=S.get('KR')?'正轉':'反轉';
+    const t2=S.d('TR2'), t3=S.d('TR3');
+    const bar=(d,c)=>`<rect x="0" y="0" width="${Math.max(0,(d.held?(1-d.t/d.T):0)*96)}" height="6" fill="${c}" rx="3"/>`;
+    return motorSVG(S,{dir:(S.get('MCS')||S.get('MCD'))?d:0,mode,
+        label:d===0?'停止':(d>0?'正轉 FWD':'反轉 REV')})
+      +`<svg viewBox="0 0 260 62" style="margin-top:6px">
+        <text x="0" y="11" fill="${C.mu}" font-size="11">KR 轉向記憶</text>
+        <rect x="98" y="1" width="52" height="14" rx="7" fill="${S.get('KR')?C.hotbg:C.okbg}"/>
+        <text x="124" y="12" fill="#fff" font-size="10" text-anchor="middle" font-family="monospace">${kr}</text>
+        <text x="0" y="33" fill="${C.mu}" font-size="11">TR2 復電視窗 t2</text>
+        <g transform="translate(150,26)"><rect width="96" height="6" rx="3" fill="${C.trk}"/>${bar(t2,C.amb)}</g>
+        <text x="0" y="53" fill="${C.mu}" font-size="11">TR3 停止鎖定 t3</text>
+        <g transform="translate(150,46)"><rect width="96" height="6" rx="3" fill="${C.trk}"/>${bar(t3,C.red)}</g>
+      </svg>`;
+  },
+  scenarios:[
+    {name:'1. 正轉啟動到完成運轉',
+     steps:[
+      {t:'1　電路初始，除 GL 亮外，其餘皆不動作。',hold:1.4},
+      {t:'1-1　按下 FWD，MCF 動作且自保持，綠燈滅，KR 被 SET 為「正轉」記憶。',a:S=>S.tap('FWD',.5),hold:2},
+      {t:'1-2　同時 MCS 動作、TR1 開始計時，馬達以 Y 接線啟動，R2 亮。',hold:2},
+      {t:'3　TR1 計時到，MCS 跳脫、MCD 動作，馬達以 Δ 接線運轉，R2 滅、R1 亮。',hold:2.4,until:S=>S.get('MCD')},
+      {t:'4　同時 TR2（Off-Delay）動作，接點立刻動作 → MCF 取得第二條導通路徑（正轉啟動完成）。',hold:2.4}
+     ]},
+    {name:'2. 正轉啟動中按 EMS（無法復歸）',
+     steps:[
+      {t:'按下 FWD 開始 Y 啟動（此時 TR2 尚未動作）。',a:S=>S.tap('FWD',.5),hold:2},
+      {t:'2-1　啟動當中按下 EMS，TR2 尚未動作，按 EMS 之後電路全部復歸…',a:S=>S.set('EMS',true),hold:2.2},
+      {t:'2-2　放開 EMS 後無法獲得重新啟動的路徑（TR2 的接點從未閉合）。',a:S=>S.set('EMS',false),hold:2},
+      {t:'2-3　除了 GL 亮外，其餘皆不動作。',hold:1.8}
+     ]},
+    {name:'3. 正轉Δ運轉時按 EMS，t2 內放開',
+     steps:[
+      {t:'先完成正轉 Y-Δ 啟動。',a:S=>S.tap('FWD',.5),hold:5,until:S=>S.get('MCD')},
+      {t:'3-1　按下 EMS，所有動作停止，但 TR2 及 KR 的接點尚未復歸…',a:S=>S.set('EMS',true),hold:2},
+      {t:'3-2　在 TR2 設定的時限內放開 EMS，MCF 經 TR2·KR 路徑恢復動作，繼續完成 Y-Δ 啟動…',
+       a:S=>S.set('EMS',false),hold:2},
+      {t:'3-3　Y 啟動：MCF 及 MCS 動作，馬達 Y 結線啟動，R2 亮。',hold:2},
+      {t:'3-4　TR1 時間到轉為 Δ 運轉，MCF 及 MCD 動作，R1 亮。',hold:2.4,until:S=>S.get('MCD')}
+     ]},
+    {name:'4. 正轉Δ運轉時按 EMS，超過 t2 才放開',
+     steps:[
+      {t:'先完成正轉 Y-Δ 啟動。',a:S=>S.tap('FWD',.5),hold:5,until:S=>S.get('MCD')},
+      {t:'4-1　按下 EMS，所有動作停止，但 TR2 及 KR 的接點尚未復歸…',a:S=>S.set('EMS',true),hold:2},
+      {t:'觀察 TR2 的復電視窗倒數歸零…',hold:4.6,until:S=>!S.d('TR2').held},
+      {t:'4-2　在超過 TR2 設定的時限後才放開 EMS，MCF 不再動作，只有 GL 亮。',a:S=>S.set('EMS',false),hold:2.4}
+     ]},
+    {name:'5. 正轉Δ運轉時按 OFF',
+     steps:[
+      {t:'先完成正轉 Y-Δ 啟動。',a:S=>S.tap('FWD',.5),hold:5,until:S=>S.get('MCD')},
+      {t:'5-1　按下 OFF，TR3 動作，接點也立刻動作。',a:S=>S.set('OFF',true),hold:1.6},
+      {t:'5-2　除 GL 亮外其餘皆復歸，馬達停止，此時 TR2（Off-Delay）開始計時…',hold:2},
+      {t:'5-3　放開 OFF，TR3 接點開始計時；t2 時間到接點復歸，在 t3 未到之前按任何按鍵皆無效。',
+       a:S=>S.set('OFF',false),hold:2.6},
+      {t:'5-4　t3 時間到，TR3 接點復歸，電路才又回到初始狀態。',hold:3,until:S=>!S.d('TR3').held}
+     ]},
+    {name:'6. 反轉啟動到完成運轉',
+     steps:[
+      {t:'6-1　按下 REV，MCR 動作且自保持，綠燈滅，KR 被 RESET 為「反轉」記憶。',a:S=>S.tap('REV',.5),hold:2},
+      {t:'6-2　同時 MCS 動作、TR1 開始計時，馬達以 Y 接線啟動，R2 亮。',hold:2},
+      {t:'6-3　TR1 計時到，MCS 跳脫、MCD 動作，馬達以 Δ 接線運轉，R2 滅、R3 亮。',hold:2.4,until:S=>S.get('MCD')},
+      {t:'6-4　同時 TR2 動作，使 MCR 有兩個導通的路徑（反轉啟動完成）。',hold:2.4}
+     ]},
+    {name:'8. 反轉Δ運轉時按 EMS，t2 內放開',
+     steps:[
+      {t:'先完成反轉 Y-Δ 啟動。',a:S=>S.tap('REV',.5),hold:5,until:S=>S.get('MCD')},
+      {t:'8-1　按下 EMS，所有動作停止，但 TR2 的接點尚未復歸…',a:S=>S.set('EMS',true),hold:2},
+      {t:'8-2　在 TR2 設定的時限內放開 EMS，MCR 恢復動作，繼續完成 Y-Δ 啟動。',a:S=>S.set('EMS',false),hold:2},
+      {t:'8-3　Y 啟動：MCR 及 MCS 動作，馬達 Y 結線啟動，R2 亮。',hold:2},
+      {t:'8-4　Δ 運轉：MCR 及 MCD 動作，R3 亮。',hold:2.4,until:S=>S.get('MCD')}
+     ]}
+  ]
+});
+/* ---------- 水位槽繪圖 ---------- */
+function tankSVG({x,y,w,h,lv,marks,label,col}){
+  const fh=h*lv/100;
+  let m='';
+  for(const k of marks){
+    const my=y+h-h*k.at/100;
+    m+=`<line x1="${x-7}" y1="${my}" x2="${x+w+2}" y2="${my}" stroke="${k.c}" stroke-width="1.4"
+         stroke-dasharray="4 3"/>
+        <text x="${x+w+6}" y="${my+3.5}" fill="${k.c}" font-size="9">${k.n}</text>
+        <line x1="${x+k.ex}" y1="${y+3}" x2="${x+k.ex}" y2="${my}" stroke="${k.c}" stroke-width="2"/>`;
+  }
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${C.sf}" stroke="${C.ln}" stroke-width="2" rx="3"/>
+    <rect x="${x+1}" y="${y+h-fh}" width="${w-2}" height="${fh}" fill="${col||C.water}" opacity=".78"/>
+    <line x1="${x+1}" y1="${y+h-fh}" x2="${x+w-1}" y2="${y+h-fh}" stroke="${C.wtop}" stroke-width="1.6"/>
+    ${m}<text x="${x+w/2}" y="${y-5}" fill="${C.mu}" font-size="10" text-anchor="middle">${label}</text>`;
+}
+function pumpSVG(x,y,on,name){
+  return `<circle cx="${x}" cy="${y}" r="13" fill="${on?C.hotbg:C.sf}"
+      stroke="${on?C.red:C.ln}" stroke-width="2"/>
+    <text x="${x}" y="${y+4}" fill="${on?C.hotfg:C.dm}" font-size="10"
+      text-anchor="middle" font-family="monospace">${name}</text>
+    ${on?`<circle cx="${x}" cy="${y}" r="17" fill="none" stroke="${C.red}" stroke-width="1.4" opacity=".5"/>`:''}`;
+}
+
+/* =====================  第 3 題  ===================== */
+CIRCUITS.push({
+  tab:'3 · 抽水泵交替',
+  title:'第3題　兩台抽水泵手動、自動交替控制電路',
+  desc:'COS 切「手動」時由 ON1/ON2 個別操作且互鎖；切「自動」時，<b>FS</b> 需確認給水源有水，<b>61F-G</b> 檢出水塔水位驅動 X，<b>MR 交替電驛</b>在每次滿水位時切換一次接點，使 M1、M2 輪流抽水。',
+  railL:'R', railR:'T',
+  devices:{
+    COSM:{k:'in',n:'手動',hide:1},COSA:{k:'in',n:'自動',hide:1},
+    ON1:{k:'in',n:'M1啟動'},OFF1:{k:'in',n:'M1停止'},ON2:{k:'in',n:'M2啟動'},OFF2:{k:'in',n:'M2停止'},
+    THR1:{k:'in',n:'M1過載'},THR2:{k:'in',n:'M2過載'},FS:{k:'in',n:'給水源浮球'},
+    '61F':{k:'flag',n:'61F-G 滿水位',hide:1},
+    MC1:{k:'relay',n:'M1 接觸器'},MC2:{k:'relay',n:'M2 接觸器'},
+    X:{k:'relay',n:'滿水位電驛'},MR:{k:'alt',n:'交替電驛'},
+    R1:{k:'lamp',n:'M1運轉'},R2:{k:'lamp',n:'M2運轉'},
+    G1:{k:'lamp',n:'滿水位'},G2:{k:'lamp',n:'停止'},BZ:{k:'bz',n:'蜂鳴器'}
+  },
+  inputs:[
+    {d:'COS',k:'sel',g:'COS 切換開關',opts:[
+      {label:'手動 MANUAL',set:{COSM:1,COSA:0}},{label:'自動 AUTO',set:{COSM:0,COSA:1}}]},
+    {d:'ON1',n:'M1啟動',k:'mom',c:'grn',g:'手動操作'},{d:'OFF1',n:'M1停止',k:'mom',c:'red',g:'手動操作'},
+    {d:'ON2',n:'M2啟動',k:'mom',c:'grn',g:'手動操作'},{d:'OFF2',n:'M2停止',k:'mom',c:'red',g:'手動操作'},
+    {d:'FS',n:'給水源有水',k:'tog',c:'',g:'現場條件'},
+    {d:'LV',k:'slider',mk:'lv',g:'水塔水位（可拖曳）',fmt:v=>Math.round(v)+'%'},
+    {d:'THR1',n:'M1跳脫',k:'tog',c:'ylw',g:'故障模擬'},{d:'THR2',n:'M2跳脫',k:'tog',c:'ylw',g:'故障模擬'}
+  ],
+  lampList:[{d:'G2',n:'停止',c:'okfg'},{d:'G1',n:'滿水位',c:'blu'},
+            {d:'R1',n:'M1運轉',c:'red'},{d:'R2',n:'M2運轉',c:'org'},{d:'BZ',n:'蜂鳴器',c:'ylw'}],
+  rungs:[
+    {s:[par([no('THR1')],[no('THR2')]),bz('BZ')],bypass:1},
+    {s:[nc('THR1'),par(
+        [no('COSM'),pnc('OFF1'),par([pno('ON1')],[no('MC1','自保')])],
+        [no('COSA'),no('FS'),nc('X','未滿水'),nc('MR','交替')]),nc('MC2','互鎖'),coil('MC1')]},
+    {s:[nc('THR2'),par(
+        [no('COSM'),pnc('OFF2'),par([pno('ON2')],[no('MC2','自保')])],
+        [no('COSA'),no('FS'),nc('X'),no('MR','交替')]),nc('MC1','互鎖'),coil('MC2')]},
+    {s:[no('61F'),coil('X')]},
+    {s:[no('X'),coil('MR')]},
+    {s:[no('X'),lamp('G1','blu')]},
+    {s:[nc('MC1'),nc('MC2'),lamp('G2','okfg')]},
+    {s:[no('MC1'),lamp('R1','red')]},
+    {s:[no('MC2'),lamp('R2','org')]}
+  ],
+  power(S){ return power2M(S,'5HP'); },
+  init(S){ S.m.lv=8; S.set('FS',true); S.set('COSM',true); },
+  pre(S){
+    const lv=S.m.lv||0;
+    if(lv>=92) S.set('61F',true); else if(lv<=18) S.set('61F',false);
+  },
+  post(S,dt){
+    let lv=S.m.lv||0;
+    const pumping=(S.get('MC1')||S.get('MC2'))&&S.get('FS');
+    lv += (pumping? 16 : 0)*dt - 5.5*dt;      // 抽水上升 / 用水下降
+    S.m.lv=Math.max(0,Math.min(100,lv));
+  },
+  scene(S){
+    const lv=S.m.lv||0, fs=S.get('FS');
+    return `<svg viewBox="0 0 260 160">
+      ${tankSVG({x:150,y:16,w:74,h:100,lv,label:'水塔',col:C.water,marks:[
+        {at:92,n:'E1 滿',c:C.blu,ex:20},{at:18,n:'E2 低',c:C.mu,ex:40}]})}
+      <rect x="14" y="96" width="102" height="50" fill="${C.sf}" stroke="${C.ln}" stroke-width="2" rx="3"/>
+      <rect x="15" y="${fs?106:126}" width="100" height="${fs?39:19}" fill="${C.water2}" opacity=".8"/>
+      <text x="65" y="91" fill="${C.mu}" font-size="10" text-anchor="middle">給水源（蓄水池）</text>
+      <circle cx="98" cy="${fs?104:124}" r="6" fill="${fs?C.okfg:C.dm}"/>
+      <text x="98" y="${fs?93:113}" fill="${fs?C.okfg:C.dm}" font-size="9" text-anchor="middle">FS</text>
+      ${pumpSVG(40,60,S.get('MC1'),'M1')}${pumpSVG(96,60,S.get('MC2'),'M2')}
+      <path d="M40 47 L40 30 L150 30" stroke="${S.get('MC1')?C.red:C.wr}" stroke-width="2" fill="none"/>
+      <path d="M96 47 L96 38 L150 38" stroke="${S.get('MC2')?C.org:C.wr}" stroke-width="2" fill="none"/>
+      <path d="M40 73 L40 96 M96 73 L96 96" stroke="${C.wr}" stroke-width="2"/>
+      <text x="187" y="132" fill="${C.tx}" font-size="11" text-anchor="middle"
+        font-family="monospace">${Math.round(lv)}%</text>
+      <text x="130" y="156" fill="${C.mu}" font-size="10" text-anchor="middle">交替電驛 MR ＝ 下次由 ${S.get('MR')?'M2':'M1'} 抽水</text>
+    </svg>`;
+  },
+  scenarios:[
+    {name:'1. 手動操作（M1 動作）',setup:S=>{S.set('COSM',1);S.set('COSA',0);S.m.lv=8;},
+     steps:[
+      {t:'1　電路初始（手動模式），S2、S0 受電、61F-G 工作中，水塔沒水，給水源 FS 閉合；除 G2 亮外其餘皆不動作。',hold:1.6},
+      {t:'1-2　按下 ON1，MC1 動作且自保持，R1 亮、G2 滅，M1 開始運轉（MC2 的 b 接點形成互鎖）。',a:S=>S.tap('ON1',.5),hold:2.4},
+      {t:'1-3　按下 OFF1，MC1 復歸、R1 滅、M1 停止、G2 亮，電路回復初始狀態。',a:S=>S.tap('OFF1',.5),hold:2},
+      {t:'1-4　重新啟動後遇過載 TH-RY1 跳脫：MC1 復歸、R1 滅、M1 停止、G2 亮，BZ 響。',
+       a:S=>{S.tap('ON1',.5);setTimeout(()=>{},0);},hold:1.4},
+      {t:'　　　（TH-RY1 跳脫中）',a:S=>S.set('THR1',true),hold:2},
+      {t:'1-5　故障排除後將 TH-RY1 復歸，BZ 停響，電路回復初始狀態。',a:S=>S.set('THR1',false),hold:2}
+     ]},
+    {name:'2. 手動操作（M2 動作）',setup:S=>{S.set('COSM',1);S.set('COSA',0);S.m.lv=8;},
+     steps:[
+      {t:'2-1　按下 ON2，MC2 動作且自保持、R2 亮、G2 滅，M2 開始運轉（MC1 的 b 接點互鎖）。',a:S=>S.tap('ON2',.5),hold:2.4},
+      {t:'2-2　按 OFF2，MC2 復歸、R2 滅、G2 亮，電路回復初始狀態。',a:S=>S.tap('OFF2',.5),hold:2},
+      {t:'2-3　再啟動後 TH-RY2 跳脫：MC2 復歸、R2 滅、M2 停止、G2 亮，BZ 響。',a:S=>{S.tap('ON2',.5);},hold:1.4},
+      {t:'　　　（TH-RY2 跳脫中）',a:S=>S.set('THR2',true),hold:2},
+      {t:'2-4　故障排除後將 TH-RY2 復歸，BZ 停響，電路回復初始狀態。',a:S=>S.set('THR2',false),hold:2}
+     ]},
+    {name:'3. 自動操作（交替循環）',setup:S=>{S.set('COSM',0);S.set('COSA',1);S.set('FS',false);S.m.lv=8;},
+     steps:[
+      {t:'3-1　COS 切至自動。當給水源沒水（FS 下垂、接點開路），除 G2 亮外其餘皆不動作。',hold:2},
+      {t:'3-2　給水源有水，FS 提起、接點接通才可以開始動作。',a:S=>S.set('FS',true),hold:1.8},
+      {t:'3-3　水塔沒水（X 未動作），MC1 動作使 M1 運轉、R1 亮、G2 滅，水塔水位逐漸上升…',hold:3},
+      {t:'3-4　水塔至滿水位，X、MR 動作，G1 亮；MC1 跳脫、M1 停止、G2 亮。MR 接點已切換。',
+       hold:3,until:S=>S.get('X')},
+      {t:'3-5　水塔降至低水位以下，X、MR 跳脫，G1 滅；改由 MC2 動作、R2 亮、M2 運轉、G2 滅。',
+       hold:3,until:S=>S.get('MC2')},
+      {t:'3-6　再次滿水位，X、MR 動作，G1 亮；MC2 跳脫、M2 停止、G2 亮。MR 接點再切換一次，下輪換 M1。',
+       hold:3,until:S=>S.get('X')}
+     ]},
+    {name:'4. 自動操作（TH-RY 跳脫）',setup:S=>{S.set('COSM',0);S.set('COSA',1);S.set('FS',true);S.m.lv=40;},
+     steps:[
+      {t:'自動模式運轉中（M1 抽水）。',hold:2,until:S=>S.get('MC1')||S.get('MC2')},
+      {t:'4-1　M1 運轉當中 TH-RY 跳脫，M1 立刻停止，BZ 響、G2 亮。',a:S=>S.set('THR1',true),hold:2.4},
+      {t:'4-2　故障排除後將 TH-RY 復歸，BZ 停響；因自動條件仍成立，MC1 動作、R1 亮、M1 恢復運轉、G2 滅。',
+       a:S=>S.set('THR1',false),hold:2.4}
+     ]}
+  ]
+});
+
+/* =====================  第 4 題  ===================== */
+CIRCUITS.push({
+  tab:'4 · 排污水泵',
+  title:'第4題　排污水泵手動、自動交互兼異常水位並列運轉控制電路',
+  desc:'排水型控制：水位<b>上升</b>到高水位才啟動抽水、降到下限才停止。<b>61F-APN2</b> 於每次降到下限時切換接點，使 M1／M2 交互運轉；若水位續漲到<b>異常水位</b>，X 動作、YL 亮並讓兩台泵<b>並列運轉</b>，且自保持到下限才一起停止。',
+  railL:'R', railR:'T',
+  devices:{
+    COSM:{k:'in',n:'手動',hide:1},COSA:{k:'in',n:'自動',hide:1},
+    ON1:{k:'in',n:'M1啟動'},OFF1:{k:'in',n:'M1停止'},ON2:{k:'in',n:'M2啟動'},OFF2:{k:'in',n:'M2停止'},
+    THR1:{k:'in',n:'M1過載'},THR2:{k:'in',n:'M2過載'},
+    L1:{k:'flag',n:'BS1 高水位',hide:1},L2:{k:'flag',n:'BS2 異常水位',hide:1},
+    MC1:{k:'relay',n:'M1 接觸器'},MC2:{k:'relay',n:'M2 接觸器'},
+    X:{k:'relay',n:'異常水位'},APN:{k:'alt',n:'61F-APN2 交互'},
+    R1:{k:'lamp',n:'M1運轉'},R2:{k:'lamp',n:'M2運轉'},
+    G1:{k:'lamp',n:'M1停止'},G2:{k:'lamp',n:'M2停止'},YL:{k:'lamp',n:'異常水位'},BZ:{k:'bz',n:'蜂鳴器'}
+  },
+  inputs:[
+    {d:'COS',k:'sel',g:'COS 切換開關',opts:[
+      {label:'手動 MANUAL',set:{COSM:1,COSA:0}},{label:'自動 AUTO',set:{COSM:0,COSA:1}}]},
+    {d:'ON1',n:'M1啟動',k:'mom',c:'grn',g:'手動操作'},{d:'OFF1',n:'M1停止',k:'mom',c:'red',g:'手動操作'},
+    {d:'ON2',n:'M2啟動',k:'mom',c:'grn',g:'手動操作'},{d:'OFF2',n:'M2停止',k:'mom',c:'red',g:'手動操作'},
+    {d:'LV',k:'slider',mk:'lv',g:'污水槽水位（可拖曳）',fmt:v=>Math.round(v)+'%'},
+    {d:'INF',n:'大量入流',k:'tog',c:'ylw',g:'現場條件'},
+    {d:'THR1',n:'M1跳脫',k:'tog',c:'ylw',g:'故障模擬'},{d:'THR2',n:'M2跳脫',k:'tog',c:'ylw',g:'故障模擬'}
+  ],
+  lampList:[{d:'G1',n:'M1停止',c:'okfg'},{d:'G2',n:'M2停止',c:'okfg'},
+            {d:'R1',n:'M1運轉',c:'red'},{d:'R2',n:'M2運轉',c:'org'},
+            {d:'YL',n:'異常水位',c:'ylw'},{d:'BZ',n:'蜂鳴器',c:'org'}],
+  rungs:[
+    {s:[par([no('THR1')],[no('THR2')]),bz('BZ')],bypass:1},
+    {s:[nc('THR1'),par(
+        [no('COSM'),pnc('OFF1'),par([pno('ON1')],[no('MC1','自保')])],
+        [no('COSA'),no('L1','高水位'),par([nc('APN','交互')],[no('X','異常')],[no('MC1','自保')])]),coil('MC1')]},
+    {s:[nc('THR2'),par(
+        [no('COSM'),pnc('OFF2'),par([pno('ON2')],[no('MC2','自保')])],
+        [no('COSA'),no('L1'),par([no('APN','交互')],[no('X','異常')],[no('MC2','自保')])]),coil('MC2')]},
+    {s:[no('L2'),coil('X')]},
+    {s:[nc('L1','降至下限'),coil('APN')]},
+    {s:[no('X'),lamp('YL','ylw')]},
+    {s:[nc('MC1'),lamp('G1','okfg')]},
+    {s:[nc('MC2'),lamp('G2','okfg')]},
+    {s:[no('MC1'),lamp('R1','red')]},
+    {s:[no('MC2'),lamp('R2','org')]}
+  ],
+  power(S){ return power2M(S,'3HP'); },
+  init(S){ S.m.lv=6; S.set('COSM',true); },
+  pre(S){
+    const lv=S.m.lv||0;
+    if(lv>=62) S.set('L1',true); else if(lv<=14) S.set('L1',false);
+    S.set('L2', lv>=86);
+  },
+  post(S,dt){
+    let lv=S.m.lv||0;
+    const n=(S.get('MC1')?1:0)+(S.get('MC2')?1:0);
+    lv += (S.get('INF')?17:7)*dt - n*11*dt;
+    S.m.lv=Math.max(0,Math.min(100,lv));
+  },
+  scene(S){
+    const lv=S.m.lv||0;
+    return `<svg viewBox="0 0 260 160">
+      ${tankSVG({x:66,y:14,w:128,h:112,lv,label:'污水槽',col:C.sew,marks:[
+        {at:86,n:'BS2 異常',c:C.ylw,ex:22},{at:62,n:'BS1 上限',c:C.org,ex:48},
+        {at:14,n:'下限',c:C.mu,ex:74}]})}
+      ${pumpSVG(30,96,S.get('MC1'),'M1')}${pumpSVG(230,96,S.get('MC2'),'M2')}
+      <path d="M43 96 L66 96" stroke="${S.get('MC1')?C.red:C.wr}" stroke-width="2"/>
+      <path d="M217 96 L194 96" stroke="${S.get('MC2')?C.org:C.wr}" stroke-width="2"/>
+      <path d="M30 83 L30 40" stroke="${S.get('MC1')?C.red:C.wr}" stroke-width="2"/>
+      <path d="M230 83 L230 40" stroke="${S.get('MC2')?C.org:C.wr}" stroke-width="2"/>
+      <text x="130" y="142" fill="${C.tx}" font-size="11" text-anchor="middle"
+        font-family="monospace">水位 ${Math.round(lv)}%</text>
+      <text x="130" y="156" fill="${C.mu}" font-size="10" text-anchor="middle">61F-APN2 交互 ＝ 本輪主泵 ${S.get('APN')?'M2':'M1'}</text>
+    </svg>`;
+  },
+  scenarios:[
+    {name:'1. 手動操作（M1 動作、停止及跳脫）',setup:S=>{S.set('COSM',1);S.set('COSA',0);S.m.lv=6;},
+     steps:[
+      {t:'1-1　電路初始（手動），除 G1 及 G2 亮外，其餘皆不動作。',hold:1.6},
+      {t:'1-2　按下 ON1，MC1 動作且自保持，R1 亮、G1 滅，M1 開始運轉…',a:S=>S.tap('ON1',.5),hold:2.2},
+      {t:'1-3　按下 OFF1，MC1 復歸、R1 滅、G1 亮，M1 停止…',a:S=>S.tap('OFF1',.5),hold:2},
+      {t:'1-4　再啟動後過載 TH-RY 跳脫：MC1 復歸、R1 滅、M1 停止，G1 亮，BZ 響。',a:S=>{S.tap('ON1',.5);},hold:1.3},
+      {t:'　　　（TH-RY1 跳脫中）',a:S=>S.set('THR1',true),hold:2},
+      {t:'1-5　故障排除後將 TH-RY 復歸，BZ 停響，電路恢復初始狀態。',a:S=>S.set('THR1',false),hold:2}
+     ]},
+    {name:'3. 手動操作（M1、M2 同時運轉）',setup:S=>{S.set('COSM',1);S.set('COSA',0);S.m.lv=6;},
+     steps:[
+      {t:'3-1　先按 ON1 使 M1 運轉。',a:S=>S.tap('ON1',.5),hold:2},
+      {t:'3-2　M1 動作當中按 ON2，MC2 動作且自保持、R2 亮、G2 滅，M2 也開始運轉（本電路兩台不互鎖）。',
+       a:S=>S.tap('ON2',.5),hold:2.4},
+      {t:'3-3　分別按 OFF1、OFF2 即可各自停止。',a:S=>{S.tap('OFF1',.5);S.tap('OFF2',.5);},hold:2}
+     ]},
+    {name:'4. 自動操作（交互運轉正常流程）',setup:S=>{S.set('COSM',0);S.set('COSA',1);S.m.lv=6;},
+     steps:[
+      {t:'4-1　COS 切至「A」，S2、S0 受電，61F-G2 工作中。污水槽在下限水位，除 G1 及 G2 亮外其餘不動作。',hold:2},
+      {t:'4-2　BS2 及 BS1 開路，Tc1、Tb1 導通，61F-APN2 接點動作（決定本輪主泵）。',hold:2},
+      {t:'4-3　污水上升到高水位，BS1 短路，Tc1、Ta1 導通，61F-APN2 不受電但接點維持…',
+       hold:3.5,until:S=>S.get('L1')},
+      {t:'4-4　此時 MC2 動作、R2 亮、G2 滅，M2 運轉開始抽污水，水位下降中…',hold:3},
+      {t:'4-5　水位降至下限，Tc1、Ta1 開路 → MC2 復歸、R2 滅、M2 停止、G2 亮；61F-APN2 動作，接點切換。',
+       hold:4,until:S=>!S.get('L1')},
+      {t:'4-6　水位又上升至上限，Tc1、Ta1 導通，61F-APN2 跳脫但接點狀態不變 → 這次改由 MC1 動作、R1 亮、M1 運轉、G1 滅。',
+       hold:4,until:S=>S.get('MC1')},
+      {t:'4-7　水位到達下限，61F-APN2 再受電、接點動作，MC1 復歸、R1 滅、M1 停止、G1 亮 —— 交互循環完成。',
+       hold:4,until:S=>!S.get('L1')}
+     ]},
+    {name:'5. 自動操作（異常水位並列運轉）',setup:S=>{S.set('COSM',0);S.set('COSA',1);S.m.lv=55;S.set('INF',true);},
+     steps:[
+      {t:'大量污水入流，水位持續上升，主泵已啟動但抽不贏…',hold:2.5},
+      {t:'4-7　水位上升至異常上限，BS2 導通、Tc2、Ta2 導通 → X 動作、YL 亮；MC2 亦動作、R2 亮、M2 運轉，M1 和 M2 同時抽水。',
+       hold:3.5,until:S=>S.get('X')},
+      {t:'4-8　入流恢復正常，水位下降，BS2 開路使 X 復歸、YL 滅；但 MC2 因有另一分路（自保）導通，M1、M2 依然同時運轉。',
+       a:S=>S.set('INF',false),hold:3.5},
+      {t:'4-9　水位降到下限，BS1 也開路 → MC1、R1、MC2、R2 均復歸，M1、M2 停止，G1、G2 亮；同時 61F-APN2 受電，接點切換一次。',
+       hold:4.5,until:S=>!S.get('L1')}
+     ]},
+    {name:'6. 自動模式中 TH-RY 跳脫',setup:S=>{S.set('COSM',0);S.set('COSA',1);S.m.lv=70;},
+     steps:[
+      {t:'自動抽水中…',hold:2,until:S=>S.get('MC1')||S.get('MC2')},
+      {t:'MC 動作當中因過載 TH-RY 跳脫 → 該泵復歸、R 滅、M 停止、G 亮，BZ 響。',
+       a:S=>{S.set(S.get('MC2')?'THR2':'THR1',true);},hold:2.6},
+      {t:'故障排除後將 TH-RY 復歸，BZ 停響，該泵恢復動作、R 亮、M 運轉、G 滅。',
+       a:S=>{S.set('THR1',false);S.set('THR2',false);},hold:2.6}
+     ]}
+  ]
+});
+
+/* =====================  第 5 題  ===================== */
+CIRCUITS.push({
+  tab:'5 · 沖床直流煞車',
+  title:'第5題　沖床機自動計數直流煞車控制電路',
+  desc:'按 ON 啟動後 <b>X1 自保持</b>；一旦 MC 因 OFF、過載或計數到達而失電，<b>X1·MC-b</b> 的條件成立使 <b>MCB 直流煞車</b>投入、YL 亮並由 TR1 計時；t1 到 X1 復歸、煞車結束。COUNTER 由 LS 每一沖程上數，到達設定值即經 X2 切斷 MC，TR2 到時再自動復歸計數器。',
+  railL:'R', railR:'T',
+  devices:{
+    ON:{k:'in',n:'啟動按鈕'},OFF:{k:'in',n:'停止按鈕'},THR:{k:'in',n:'積熱電驛'},LS:{k:'in',n:'行程開關'},
+    MC:{k:'relay',n:'運轉接觸器'},MCB:{k:'relay',n:'直流煞車'},
+    X1:{k:'relay',n:'煞車控制'},X2:{k:'relay',n:'計數停止'},
+    TR1:{k:'ton',n:'煞車時間 t1',T:2.5},TR2:{k:'ton',n:'計數復歸 t2',T:2.5},
+    CNT:{k:'cnt',n:'COUNTER',preset:5},
+    RL:{k:'lamp',n:'運轉'},YL:{k:'lamp',n:'煞車中'},BZ:{k:'bz',n:'蜂鳴器'}
+  },
+  inputs:[
+    {d:'ON',n:'啟動',k:'mom',c:'grn'},{d:'OFF',n:'停止',k:'mom',c:'red'},
+    {d:'THR',n:'過載跳脫',k:'tog',c:'ylw',g:'故障模擬'}
+  ],
+  lampList:[{d:'RL',n:'運轉',c:'red'},{d:'YL',n:'煞車中',c:'ylw'},{d:'BZ',n:'蜂鳴器',c:'org'}],
+  rungs:[
+    {s:[no('THR'),bz('BZ')],bypass:1},
+    {s:[pnc('OFF'),nc('X2','計數停機'),par([pno('ON')],[no('MC','自保')]),coil('MC')]},
+    {s:[par([no('MC')],[no('X1','自保')]),tnc('TR1'),coil('X1')],bypass:1},
+    {s:[no('X1'),nc('MC','馬達已停'),par([coil('MCB')],[coil('TR1')])],bypass:1},
+    {s:[no('CNT','到達設定'),par([coil('X2')],[coil('TR2')])],bypass:1},
+    {s:[tno('TR2'),coil('CNT','R')],bypass:1},
+    {s:[no('MC'),no('LS'),coil('CNT','C')],bypass:1},
+    {s:[no('MC'),lamp('RL','red')],bypass:1},
+    {s:[no('MCB'),lamp('YL','ylw')],bypass:1}
+  ],
+  common:[nc('THR')],
+  power(S){ return power5(S); },
+  init(S){ S.m.ram=0; },
+  post(S,dt){
+    if(S.get('MC')){
+      let p=(S.m.ram||0)+dt/1.1;
+      if(p>=1){ p-=1; S.tap('LS',0.14); }
+      S.m.ram=p;
+    }
+  },
+  scene(S){
+    const p=S.m.ram||0, run=S.get('MC');
+    const y=26+Math.abs(Math.sin(p*Math.PI))*46;
+    const d=S.d('CNT');
+    return `<svg viewBox="0 0 260 150">
+      <rect x="26" y="12" width="112" height="12" fill="${C.trk}" rx="2"/>
+      <rect x="70" y="24" width="24" height="${y-24}" fill="${C.mt}"/>
+      <rect x="52" y="${y}" width="60" height="18" fill="${run?C.ramOn:C.wr}" rx="2"/>
+      <rect x="26" y="112" width="112" height="14" fill="${C.trk}" rx="2"/>
+      <rect x="46" y="100" width="72" height="12" fill="${C.sf2}"/>
+      <text x="82" y="140" fill="${run?C.amb:C.dm}" font-size="11" text-anchor="middle"
+        font-family="monospace">${run?'沖壓運轉中':S.get('MCB')?'直流煞車中':'停止'}</text>
+      <line x1="160" y1="10" x2="160" y2="132" stroke="${C.div}"/>
+      <text x="176" y="26" fill="${C.mu}" font-size="10">COUNTER</text>
+      <rect x="176" y="34" width="72" height="30" rx="4" fill="${C.sf}" stroke="${C.ln}"/>
+      <text x="212" y="56" fill="${d.on?C.red:C.okfg}" font-size="19" text-anchor="middle"
+        font-family="monospace">${String(d.cnt).padStart(2,'0')}/${d.preset}</text>
+      <text x="176" y="86" fill="${C.mu}" font-size="10">直流煞車 MCB</text>
+      <rect x="176" y="92" width="72" height="16" rx="8"
+        fill="${S.get('MCB')?C.ylw:C.sf2}" stroke="${C.ln}"/>
+      <text x="212" y="104" fill="${S.get('MCB')?C.onTx:C.dm}" font-size="10"
+        text-anchor="middle" font-family="monospace">${S.get('MCB')?'BRAKE ON':'OFF'}</text>
+      <text x="212" y="128" fill="${C.dm}" font-size="9.5" text-anchor="middle">LS 每沖程上數 1 次</text>
+    </svg>`;
+  },
+  scenarios:[
+    {name:'1. 以 PB/ON 啟動、以 PB/OFF 停止',
+     steps:[
+      {t:'1-1　電路初始，除了 COUNTER 受電外，其餘皆不動作。',hold:1.6},
+      {t:'1-2　按下 ON，MC 動作且自保持、RL 亮、M 開始運轉。',a:S=>S.tap('ON',.5),hold:2},
+      {t:'1-3　同時 X1 動作且自保持（經 TR1 的限時 b 接點）。',hold:2},
+      {t:'1-4　按下 OFF，MC 復歸、RL 滅，M 停止運轉。',a:S=>S.tap('OFF',.5),hold:1.6},
+      {t:'1-5　此時 X1 仍自保持且 MC-b 已閉合 → MCB 動作、TR1 也動作，直流煞車動作、YL 亮。',hold:2},
+      {t:'1-6　t1 時間到，TR1 接點開路，X1 跳脫、MCB 及 TR1 也跳脫，煞車停止、YL 滅。',
+       hold:2.6,until:S=>!S.get('MCB')}
+     ]},
+    {name:'2. 動作當中 TH-RY 跳脫',
+     steps:[
+      {t:'先按 ON 使沖床運轉。',a:S=>S.tap('ON',.5),hold:2.4},
+      {t:'2-1　運轉當中 TH-RY 跳脫：MC 跳脫、RL 滅、M 停止、BZ 響。',a:S=>S.set('THR',true),hold:2},
+      {t:'2-2　同時 MCB 及 TR1 動作，開始煞車、YL 亮，TR1 開始計時。',hold:2},
+      {t:'2-3　t1 時間到，X1 跳脫，MCB 及 TR1 也復歸、煞車停止、YL 滅。',hold:2.6,until:S=>!S.get('MCB')},
+      {t:'2-4　故障排除後將 TH-RY 復歸，BZ 停響，電路恢復初始狀態。',a:S=>S.set('THR',false),hold:2}
+     ]},
+    {name:'3. 以 COUNTER 計數停止',
+     steps:[
+      {t:'3-1　按下 ON，MC 動作且自保持、RL 亮、M 開始運轉。',a:S=>S.tap('ON',.5),hold:2},
+      {t:'3-2　同時 X1 動作且自保持。',hold:1.6},
+      {t:'3-3　LS 每作動一次，COUNTER 計數值上數 1 次…',hold:4,until:S=>S.d('CNT').cnt>=3},
+      {t:'3-4　當計數值到達設定值時接點動作，X2 及 TR2 動作並開始計時。',hold:2.5,until:S=>S.get('X2')},
+      {t:'3-5　此時 X2 的 b 接點切斷 MC → MC 復歸、RL 滅、馬達停止。',hold:1.6},
+      {t:'3-6　接著 MCB 及 TR1 動作、開始煞車、YL 亮，TR1 開始計時…',hold:2},
+      {t:'3-7　TR1 計時到，X1 復歸，MCB、TR1 也復歸，煞車停止、YL 滅。',hold:2.4,until:S=>!S.get('MCB')},
+      {t:'3-8　TR2 計時到，COUNTER 復歸，X2、TR2 也復歸，電路回復初始狀態。',
+       hold:2.6,until:S=>S.d('CNT').cnt===0}
+     ]}
+  ]
+});
+
+/* =====================  第 6 題  ===================== */
+CIRCUITS.push({
+  tab:'6 · 大門控制',
+  title:'第6題　大門控制電路',
+  desc:'光電開關 <b>PH1（外→內）</b>／<b>PH2（內→外）</b>遮光後經 X3／X4 使 MCF 開門並自保持，同時 TR1／TR2 點亮「歡迎光臨」／「謝謝光臨」。門全開由 <b>LS1</b> 停止開門並啟動 TR5 停留計時，時間到 MCR 反轉關門，門閉合由 <b>LS2</b> 停止。',
+  railL:'R', railR:'T',
+  devices:{
+    PH1:{k:'in',n:'外側光電'},PH2:{k:'in',n:'內側光電'},EMS:{k:'in',n:'緊急停止'},THR:{k:'in',n:'積熱電驛'},
+    LS1:{k:'flag',n:'LS1 全開',hide:1},LS2:{k:'flag',n:'LS2 全閉',hide:1},
+    X3:{k:'relay',n:'外側檢出'},X4:{k:'relay',n:'內側檢出'},
+    MCF:{k:'relay',n:'開門正轉'},MCR:{k:'relay',n:'關門反轉'},
+    TR1:{k:'ton',n:'歡迎光臨 T1',T:3},TR2:{k:'ton',n:'謝謝光臨 T2',T:3},
+    TR3:{k:'ton',n:'TR1 解除',T:1.6},TR4:{k:'ton',n:'TR2 解除',T:1.6},
+    TR5:{k:'ton',n:'全開停留',T:2.5},
+    X1:{k:'relay',n:'T1 到達'},X2:{k:'relay',n:'T2 到達'},
+    R1:{k:'lamp',n:'開門'},R2:{k:'lamp',n:'關門'},
+    Y1:{k:'lamp',n:'歡迎光臨'},Y2:{k:'lamp',n:'謝謝光臨'},PH:{k:'lamp',n:'光電電源'}
+  },
+  inputs:[
+    {d:'PH1',n:'外側遮光',k:'tog',c:'grn',g:'光電開關'},{d:'PH2',n:'內側遮光',k:'tog',c:'grn',g:'光電開關'},
+    {d:'EMS',n:'緊急停止',k:'tog',c:'red',g:'保護裝置'},{d:'THR',n:'過載跳脫',k:'tog',c:'ylw',g:'保護裝置'}
+  ],
+  lampList:[{d:'PH',n:'光電電源',c:'blu'},{d:'R1',n:'開門',c:'red'},{d:'R2',n:'關門',c:'org'},
+            {d:'Y1',n:'歡迎光臨',c:'ylw'},{d:'Y2',n:'謝謝光臨',c:'okfg'}],
+  rungs:[
+    {s:[no('PH1'),coil('X3')]},
+    {s:[no('PH2'),coil('X4')]},
+    {s:[nc('EMS'),nc('THR'),nc('LS1','全開停'),nc('MCR','互鎖'),
+        par([no('X3')],[no('X4')],[no('MCF','自保')]),coil('MCF')]},
+    {s:[nc('EMS'),nc('THR'),par([no('X3')],[no('TR1','自保')]),tnc('TR3'),coil('TR1')]},
+    {s:[nc('EMS'),nc('THR'),par([no('X4')],[no('TR2','自保')]),tnc('TR4'),coil('TR2')]},
+    {s:[tno('TR1'),par([coil('X1')],[coil('TR3')])]},
+    {s:[tno('TR2'),par([coil('X2')],[coil('TR4')])]},
+    {s:[no('TR1'),tnc('TR1'),lamp('Y1','ylw')]},
+    {s:[no('TR2'),tnc('TR2'),lamp('Y2','okfg')]},
+    {s:[nc('EMS'),nc('THR'),no('LS1','門已全開'),coil('TR5')]},
+    {s:[nc('EMS'),nc('THR'),nc('LS2','全閉停'),nc('MCF','互鎖'),
+        par([tno('TR5')],[no('MCR','自保')]),coil('MCR')]},
+    {s:[no('MCF'),lamp('R1','red')]},
+    {s:[no('MCR'),lamp('R2','org')]},
+    {s:[lamp('PH','blu')]}
+  ],
+  power(S){ return power6(S); },
+  init(S){ S.m.door=0; },
+  pre(S){
+    const d=S.m.door||0;
+    S.set('LS1', d>=99.5); S.set('LS2', d<=0.5);
+  },
+  post(S,dt){
+    let d=S.m.door||0;
+    if(S.get('MCF')) d+=52*dt; else if(S.get('MCR')) d-=52*dt;
+    S.m.door=Math.max(0,Math.min(100,d));
+  },
+  scene(S){
+    const d=S.m.door||0, w=52*(1-d/100);
+    const beam=(x,on,lab,c)=>`
+      <circle cx="${x}" cy="24" r="5" fill="${on?c:C.wr}"/>
+      <line x1="${x}" y1="30" x2="${x}" y2="104" stroke="${on?c:C.wr}" stroke-width="1.6"
+        stroke-dasharray="${on?'0':'3 4'}"/>
+      <text x="${x}" y="118" fill="${on?c:C.dm}" font-size="9.5" text-anchor="middle">${lab}</text>`;
+    return `<svg viewBox="0 0 260 150">
+      <rect x="18" y="34" width="224" height="62" fill="${C.sf}" stroke="${C.ln}" stroke-width="2" rx="3"/>
+      <rect x="20" y="36" width="${w}" height="58" fill="${C.mt}"/>
+      <rect x="${240-w}" y="36" width="${w}" height="58" fill="${C.mt}"/>
+      <line x1="130" y1="36" x2="130" y2="94" stroke="${C.div}" stroke-dasharray="3 4"/>
+      ${beam(64,S.get('PH1'),'PH1 外側',C.okfg)}
+      ${beam(196,S.get('PH2'),'PH2 內側',C.blu)}
+      <text x="130" y="20" fill="${C.mu}" font-size="10" text-anchor="middle">
+        LS2 全閉 ${S.get('LS2')?'●':'○'}　開度 ${Math.round(d)}%　LS1 全開 ${S.get('LS1')?'●':'○'}</text>
+      <text x="130" y="138" fill="${S.get('MCF')?C.red:S.get('MCR')?C.org:C.dm}"
+        font-size="11.5" text-anchor="middle" font-family="monospace">
+        ${S.get('MCF')?'▶ 開門中 (MCF 正轉)':S.get('MCR')?'◀ 關門中 (MCR 反轉)':'馬達停止'}</text>
+    </svg>`;
+  },
+  scenarios:[
+    {name:'1+2. 訪客由外入內（燈號＋門動作）',
+     steps:[
+      {t:'1　電路初始，PH 受電，其餘皆不動作。大門閉合，LS2 動作。',hold:1.6},
+      {t:'2　訪客由外入內，PH1 遮光，X3 動作。',a:S=>S.set('PH1',true),hold:1.6},
+      {t:'3　接著 MCF 動作且自保持、R1 亮、電動機正轉（開門）。',hold:1.8},
+      {t:'4　同時 TR1 動作開始計時並自保持、Y1 亮（歡迎光臨）。',hold:1.6},
+      {t:'5　訪客已入內，PH1 不遮光，X3 復歸，MCF 及 TR1 依然自保持。',a:S=>S.set('PH1',false),hold:1.8},
+      {t:'8　大門全開，LS1 動作 → MCF 復歸、R1 滅、馬達停止；TR5 動作並開始計時。',
+       hold:2.4,until:S=>S.get('LS1')},
+      {t:'6　T1 時間到，TR1 接點動作，Y1（歡迎光臨）滅，X1 動作，TR3 開始計時。',hold:2.2,until:S=>S.get('X1')},
+      {t:'7　TR3 計時到，TR1 跳脫，X1 復歸，TR3 也復歸。',hold:2},
+      {t:'9　TR5 計時到，接點動作，MCR 動作且自保持、R2 亮、馬達反轉，大門關閉。',
+       hold:2.4,until:S=>S.get('MCR')},
+      {t:'10　關門動作啟動後 LS1 復歸，TR5 跳脫，接點也隨著復歸。',hold:2},
+      {t:'11　門關至閉合 LS2 動作，MCR 跳脫、R2 滅、馬達停止，回復初始狀態。',
+       hold:3,until:S=>S.get('LS2')}
+     ]},
+    {name:'3+4. 訪客由內出外（燈號＋門動作）',
+     steps:[
+      {t:'11　電路初始，PH 受電，大門閉合，LS2 動作。',hold:1.6},
+      {t:'12　訪客由內出外，PH2 遮光，X4 動作。',a:S=>S.set('PH2',true),hold:1.6},
+      {t:'13　接著 MCF 動作且自保持、R1 亮、電動機正轉（開門）。',hold:1.8},
+      {t:'14　同時 TR2 動作開始計時並自保持、Y2 亮（謝謝光臨）。',hold:1.6},
+      {t:'15　訪客已出外，PH2 不遮光，X4 復歸，MCF 及 TR2 依然自保持。',a:S=>S.set('PH2',false),hold:1.8},
+      {t:'18　大門全開，LS1 動作，MCF 復歸、R1 滅、馬達停止，TR5 動作並開始計時。',
+       hold:2.4,until:S=>S.get('LS1')},
+      {t:'16　T2 時間到，TR2 接點動作，Y2（謝謝光臨）滅，X2 動作，TR4 開始計時。',hold:2.2,until:S=>S.get('X2')},
+      {t:'17　TR4 計時到，TR2 跳脫，X2 復歸，TR4 也復歸。',hold:2},
+      {t:'19　TR5 計時到，MCR 動作且自保持、R2 亮、馬達反轉，大門關閉。',hold:2.4,until:S=>S.get('MCR')},
+      {t:'20　門關至閉合 LS2 動作，MCR 跳脫、R2 滅、馬達停止，回復初始狀態。',
+       hold:3,until:S=>S.get('LS2')}
+     ]},
+    {name:'5. EMS 被按下或 TH-RY 跳脫',
+     steps:[
+      {t:'先讓大門動作起來（PH1 遮光開門）。',a:S=>{S.set('PH1',true);},hold:1.8},
+      {t:'（訪客通過，PH1 復歸，門仍在開啟中）',a:S=>S.set('PH1',false),hold:1.4},
+      {t:'21　馬達動作當中按下 EMS，除 PH 依然受電外，其餘皆不動作。',a:S=>S.set('EMS',true),hold:2.4},
+      {t:'22　放開 EMS，電路恢復成初始狀態（門停在原位，需重新觸發）。',a:S=>S.set('EMS',false),hold:2.2},
+      {t:'23　再次觸發後，馬達動作當中過載 TH-RY 跳脫，所有動作皆停止。',
+       a:S=>{S.set('PH2',true);setTimeout(()=>{},0);},hold:1.6},
+      {t:'　　　（TH-RY 跳脫中）',a:S=>{S.set('PH2',false);S.set('THR',true);},hold:2.2},
+      {t:'24　故障排除後將 TH-RY 復歸，電路恢復成初始狀態。',a:S=>S.set('THR',false),hold:2}
+     ]}
+  ]
+});
+/* =====================  第 7 題  ===================== */
+CIRCUITS.push({
+  tab:'7 · 電源自動切換',
+  title:'第7題　常用電源與備用電源自動切換控制電路',
+  desc:'X1 監視常用電源（NFB1）。停電時 <b>TR1（延時復歸）</b>計時到才啟動發電機 X4，再經 TR4→X3 驅動 TM 把 ATS 轉到「備用電源」側（LSB）。復電後 X1 立即切斷備用側，經 TR2→X2 驅動 TM 轉回「台電供電」側（LSA），最後 TR3 計時到才停掉發電機。',
+  railL:'R', railR:'T',
+  devices:{
+    NFB1:{k:'in',n:'常用電源'},NFB2:{k:'in',n:'備用電源'},
+    LSA:{k:'flag',n:'ATS 台電位置',hide:1},LSB:{k:'flag',n:'ATS 備用位置',hide:1},
+    X1:{k:'relay',n:'市電監視'},X2:{k:'relay',n:'轉台電指令'},
+    X3:{k:'relay',n:'轉備用指令'},X4:{k:'relay',n:'發電機運轉'},
+    TR1:{k:'toff',n:'停電確認 t1',T:3},TR2:{k:'ton',n:'復電確認 t2',T:2.5},
+    TR3:{k:'ton',n:'發電機停機 t3',T:3},TR4:{k:'ton',n:'發電機穩定 t4',T:2.5},
+    TMF:{k:'relay',n:'TM 轉向台電'},TMR:{k:'relay',n:'TM 轉向備用'},
+    W:{k:'lamp',n:'常用供電'},R:{k:'lamp',n:'備用供電'},
+    Y1:{k:'lamp',n:'ATS 轉動中'},Y2:{k:'lamp',n:'發電機運轉'}
+  },
+  inputs:[
+    {d:'NFB1',n:'常用電源 ON',k:'tog',c:'grn',g:'電源開關'},
+    {d:'NFB2',n:'備用電源 ON',k:'tog',c:'grn',g:'電源開關'}
+  ],
+  lampList:[{d:'W',n:'常用供電',c:'wht'},{d:'R',n:'備用供電',c:'red'},
+            {d:'Y1',n:'ATS轉動',c:'ylw'},{d:'Y2',n:'發電機',c:'okfg'}],
+  rungs:[
+    {s:[no('NFB1'),coil('X1')]},
+    {s:[no('X1'),coil('TR1')]},
+    {s:[no('X1'),coil('TR2')]},
+    {s:[no('NFB2'),par([no('X1'),tnc('TR3')],[tnc('TR1','停電確認')]),coil('X4')]},
+    {s:[no('X1'),tno('TR2'),coil('X2')]},
+    {s:[no('X4'),nc('X1','市電停'),coil('TR4')]},
+    {s:[nc('X1'),tno('TR4'),coil('X3')]},
+    {s:[no('X2'),nc('LSA','到位停'),coil('TMF')]},
+    {s:[no('X3'),nc('LSB','到位停'),coil('TMR')]},
+    {s:[no('LSA'),no('X1'),coil('TR3')]},
+    {s:[no('LSA'),no('X1'),lamp('W','wht')]},
+    {s:[no('LSB'),nc('X1'),lamp('R','red')]},
+    {s:[par([no('TMF')],[no('TMR')]),lamp('Y1','ylw')]},
+    {s:[no('X4'),lamp('Y2','okfg')]}
+  ],
+  init(S){ S.m.ats=0; S.set('NFB2',true); S.set('NFB1',false); },
+  pre(S){ const a=S.m.ats||0; S.set('LSA',a>=99.5); S.set('LSB',a<=0.5); },
+  post(S,dt){
+    let a=S.m.ats||0;
+    if(S.get('TMF')) a+=42*dt; else if(S.get('TMR')) a-=42*dt;
+    S.m.ats=Math.max(0,Math.min(100,a));
+  },
+  scene(S){
+    const a=S.m.ats||0, ang=-52+104*(a/100);
+    const mains=S.get('NFB1'), gen=S.get('X4');
+    return `<svg viewBox="0 0 260 168">
+      <rect x="8" y="10" width="78" height="34" rx="5" fill="${mains?C.okbg:C.sf2}"
+        stroke="${mains?C.okfg:C.ln}" stroke-width="2"/>
+      <text x="47" y="26" fill="${mains?C.okfg:C.dm}" font-size="11" text-anchor="middle">台電常用</text>
+      <text x="47" y="38" fill="${mains?C.okfg:C.dm}" font-size="9.5" text-anchor="middle">
+        ${mains?'送電中':'停電中'}</text>
+      <rect x="174" y="10" width="78" height="34" rx="5" fill="${gen?C.okbg:C.sf2}"
+        stroke="${gen?C.okfg:C.ln}" stroke-width="2"/>
+      <text x="213" y="26" fill="${gen?C.okfg:C.dm}" font-size="11" text-anchor="middle">發電機備用</text>
+      <text x="213" y="38" fill="${gen?C.okfg:C.dm}" font-size="9.5" text-anchor="middle">
+        ${gen?'運轉中':'停止'}</text>
+      <path d="M47 44 L47 66 L104 66" stroke="${mains?C.okfg:C.wr}" stroke-width="2" fill="none"/>
+      <path d="M213 44 L213 66 L156 66" stroke="${gen?C.okfg:C.wr}" stroke-width="2" fill="none"/>
+      <circle cx="130" cy="92" r="30" fill="${C.sf}" stroke="${C.ln}" stroke-width="2"/>
+      <text x="96" y="70" fill="${C.mu}" font-size="9">備用</text>
+      <text x="150" y="70" fill="${C.mu}" font-size="9">台電</text>
+      <line x1="130" y1="92" x2="${130+25*Math.sin(ang*Math.PI/180)}"
+        y2="${92-25*Math.cos(ang*Math.PI/180)}"
+        stroke="${S.get('Y1')?C.ylw:C.tx}" stroke-width="3.4" stroke-linecap="round"/>
+      <circle cx="130" cy="92" r="4" fill="${C.tx}"/>
+      <text x="130" y="136" fill="${C.mu}" font-size="10" text-anchor="middle">ATS 自動切換開關</text>
+      <path d="M130 122 L130 146" stroke="${S.get('W')||S.get('R')?C.amb:C.wr}" stroke-width="2.4"/>
+      <rect x="96" y="146" width="68" height="18" rx="4" fill="${C.sf2}" stroke="${C.ln}"/>
+      <text x="130" y="159" fill="${S.get('W')?C.wht:S.get('R')?C.red:C.dm}"
+        font-size="10" text-anchor="middle" font-family="monospace">
+        ${S.get('W')?'常用供電':S.get('R')?'備用供電':'負載無電'}</text>
+      <text x="46" y="112" fill="${S.get('LSB')?C.amb:C.ln}" font-size="9">LSB ${S.get('LSB')?'●':'○'}</text>
+      <text x="196" y="112" fill="${S.get('LSA')?C.amb:C.ln}" font-size="9">LSA ${S.get('LSA')?'●':'○'}</text>
+    </svg>`;
+  },
+  scenarios:[
+    {name:'1. 常用與備用電源一起送電',setup:S=>{S.set('NFB1',false);S.set('NFB2',true);S.m.ats=0;},
+     steps:[
+      {t:'1　電路初始：Y2 亮，發電機送電，ATS 停在「備用電源」側。',hold:2.5},
+      {t:'2　將 NFB1 及 NFB2 都 ON：X1、TR1、TR2、X4 皆動作，TR2 開始計時…，Y2 仍然亮著。',
+       a:S=>{S.set('NFB1',true);S.set('NFB2',true);},hold:2.4},
+      {t:'3　TR2 計時時間到，X2 動作，接著 TM 動作、Y1 亮，ATS 開始轉動…',hold:2.6,until:S=>S.get('X2')},
+      {t:'4　ATS 轉至「台電供電」位置，LSA 動作 → TM 停止、Y1 滅、W 亮，由常用電源正式供電；TR3 動作也開始計時。',
+       hold:3,until:S=>S.get('LSA')},
+      {t:'5　TR3 計時時間到，X4 跳脫、Y2 滅（發電機停止運轉），備用電源停止，由常用電源正式供電。',
+       hold:3.4,until:S=>!S.get('X4')}
+     ]},
+    {name:'2. 常用電源停電，切換至備用電源',
+     setup:S=>{S.set('NFB1',true);S.set('NFB2',true);S.m.ats=100;},
+     steps:[
+      {t:'目前由常用電源供電（W 亮、ATS 在台電側）。',hold:2.5},
+      {t:'6　市電供電中遇到停電（NFB1 OFF）：X1、TR1、TR2、X2、TR3 均復歸、W 滅，TR1 開始計時。',
+       a:S=>S.set('NFB1',false),hold:2.4},
+      {t:'7　TR1 計時時間到，發電機啟動，X4、TR4 動作，TR4 開始計時。',hold:3.2,until:S=>S.get('X4')},
+      {t:'8　TR4 計時時間到，X3 動作，TM 開始運轉、Y1 亮。',hold:2.8,until:S=>S.get('X3')},
+      {t:'9　ATS 轉至「備用電源」側，LSB 動作 → TM 停止、Y1 滅、R 亮，由備用電源供電。',
+       hold:3.4,until:S=>S.get('LSB')}
+     ]},
+    {name:'3. 備用電源供電中，常用電源復電',
+     setup:S=>{S.set('NFB1',false);S.set('NFB2',true);S.m.ats=0;},
+     steps:[
+      {t:'目前由備用電源供電（R 亮、Y2 亮、ATS 在備用側）。',hold:3,until:S=>S.get('R')},
+      {t:'10　備用電源供電當中市電恢復（NFB1 ON）：X1、TR1、TR2、X4 皆動作，TR2 開始計時…',
+       a:S=>S.set('NFB1',true),hold:2},
+      {t:'11　同時 X1 的 b 接點使 TR4、X3 復歸、R 滅，TR1 接點也立刻開路。',hold:2.2},
+      {t:'12　TR2 計時時間到，X2 動作，接著 TM 動作、Y1 亮，ATS 開始轉動…',hold:2.6,until:S=>S.get('X2')},
+      {t:'13　ATS 轉至「台電供電」位置，LSA 動作 → TM 停止、Y1 滅、W 亮；TR3 動作也開始計時。',
+       hold:3.2,until:S=>S.get('LSA')},
+      {t:'14　TR3 計時時間到，Y2 滅（發電機停止運轉），備用電源停止，X4 跳脫，由常用電源正式供電。',
+       hold:3.4,until:S=>!S.get('X4')}
+     ]}
+  ]
+});
+
+/* =====================  第 8 題（監視盤裝配）  ===================== */
+const Q8VS=[{n:'R-S',a:-60},{n:'S-T',a:0},{n:'T-R',a:60},{n:'OFF',a:120}];
+const Q8AS=[{n:'R',a:-60},{n:'S',a:0},{n:'T',a:60},{n:'OFF',a:120}];
+CIRCUITS.push({
+  tab:'8 · 監視盤裝配',
+  title:'第8題　三相三線式負載瓦時、乏時、功因、電壓、電流之監視盤裝配',
+  desc:'本題為<b>裝配（配線）</b>題，非動作題。用下方按鈕逐層顯示四類配線，並轉動 <b>VS 電壓切換開關</b>與 <b>AS 電流切換開關</b>觀察儀表讀值的變化。',
+  devices:{
+    LY1:{k:'in',n:'電源線'},LY2:{k:'in',n:'電壓回路'},LY3:{k:'in',n:'電流回路'},LY4:{k:'in',n:'接地線'},
+    VS0:{k:'in',n:'VS',hide:1},VS1:{k:'in',n:'VS',hide:1},VS2:{k:'in',n:'VS',hide:1},VS3:{k:'in',n:'VS',hide:1},
+    AS0:{k:'in',n:'AS',hide:1},AS1:{k:'in',n:'AS',hide:1},AS2:{k:'in',n:'AS',hide:1},AS3:{k:'in',n:'AS',hide:1}
+  },
+  inputs:[
+    {d:'LY',k:'sel',g:'配線層顯示',opts:[
+      {label:'全部',set:{LY1:1,LY2:1,LY3:1,LY4:1}},
+      {label:'電源線',set:{LY1:1}},{label:'電壓',set:{LY2:1}},
+      {label:'電流',set:{LY3:1}},{label:'接地',set:{LY4:1}}]},
+    {d:'VS',k:'sel',g:'VS 電壓切換開關',opts:[
+      {label:'R-S',set:{VS1:1}},{label:'S-T',set:{VS2:1}},{label:'T-R',set:{VS3:1}},{label:'OFF',set:{VS0:1}}]},
+    {d:'AS',k:'sel',g:'AS 電流切換開關',opts:[
+      {label:'R',set:{AS1:1}},{label:'S',set:{AS2:1}},{label:'T',set:{AS3:1}},{label:'OFF',set:{AS0:1}}]}
+  ],
+  lampList:[], rungs:[],
+  init(S){ S.set('LY1',1);S.set('LY2',1);S.set('LY3',1);S.set('LY4',1);
+           S.set('VS1',1); S.set('AS1',1); S.m.kwh=1284.6; S.m.kvarh=372.1; },
+  post(S,dt){ S.m.kwh=(S.m.kwh||0)+dt*0.09; S.m.kvarh=(S.m.kvarh||0)+dt*0.05; },
+  custom(){ document.getElementById('diagram').innerHTML=q8svg(); },
+  paint(S){ q8paint(S); },
+  scenarios:[
+    {name:'1. 電源線配置',steps:[
+      {t:'主電路（R、S、T 三相三線）採 <b>8mm² 黑色絞線</b>，由電源側經比流器一次側接至負載側。',
+       a:S=>{['LY1','LY2','LY3','LY4'].forEach(k=>S.set(k,0));S.set('LY1',1);},hold:3},
+      {t:'R、T 兩相須貫穿 CT 一次側，<b>繞 CT 一次側的匝數要符合規定</b>（三相三線用 2 只 CT）。',hold:3}
+     ]},
+    {name:'2. 電壓表接線（並聯）',steps:[
+      {t:'電壓表接線採<b>並聯接法</b>，用 <b>2mm² 紅色絞線</b>，自 PT 二次側接至 VS 與各電壓型儀表。',
+       a:S=>{['LY1','LY2','LY3','LY4'].forEach(k=>S.set(k,0));S.set('LY2',1);},hold:3},
+      {t:'轉動 VS 至 <b>R-S</b>：電壓表顯示 R-S 線間電壓。',a:S=>{['VS0','VS2','VS3'].forEach(k=>S.set(k,0));S.set('VS1',1);},hold:2.4},
+      {t:'轉動 VS 至 <b>S-T</b>：電壓表改顯示 S-T 線間電壓。',a:S=>{['VS0','VS1','VS3'].forEach(k=>S.set(k,0));S.set('VS2',1);},hold:2.4},
+      {t:'轉動 VS 至 <b>T-R</b>：電壓表改顯示 T-R 線間電壓。',a:S=>{['VS0','VS1','VS2'].forEach(k=>S.set(k,0));S.set('VS3',1);},hold:2.4},
+      {t:'轉至 <b>OFF</b>：電壓回路斷開，電壓表歸零（PT 二次側不可短路）。',
+       a:S=>{['VS1','VS2','VS3'].forEach(k=>S.set(k,0));S.set('VS0',1);},hold:2.4}
+     ]},
+    {name:'3. 電流表接線（串聯）',steps:[
+      {t:'電流表接線採<b>串聯接法</b>，用 <b>2mm² 黑色絞線</b>，自 CT 二次側 k–l 端串接經 AS 至電流表。',
+       a:S=>{['LY1','LY2','LY3','LY4'].forEach(k=>S.set(k,0));S.set('LY3',1);},hold:3},
+      {t:'轉動 AS 至 <b>R</b>：電流表顯示 R 相電流。',a:S=>{['AS0','AS2','AS3'].forEach(k=>S.set(k,0));S.set('AS1',1);},hold:2.2},
+      {t:'轉動 AS 至 <b>S</b>：顯示 S 相電流（三相三線由 R、T 兩 CT 向量合成）。',
+       a:S=>{['AS0','AS1','AS3'].forEach(k=>S.set(k,0));S.set('AS2',1);},hold:2.4},
+      {t:'轉動 AS 至 <b>T</b>：顯示 T 相電流。',a:S=>{['AS0','AS1','AS2'].forEach(k=>S.set(k,0));S.set('AS3',1);},hold:2.2},
+      {t:'AS 轉至 <b>OFF</b> 時內部仍會把 CT 二次側短路——<b>CT 二次側絕不可開路</b>，這是本題最重要的安全觀念。',
+       a:S=>{['AS1','AS2','AS3'].forEach(k=>S.set(k,0));S.set('AS0',1);},hold:3.4}
+     ]},
+    {name:'4. 接地線配置',steps:[
+      {t:'接地線一律使用<b>綠色絞線</b>，全部接到接地銅排。',
+       a:S=>{['LY1','LY2','LY3','LY4'].forEach(k=>S.set(k,0));S.set('LY4',1);},hold:2.6},
+      {t:'PT 外殼設備接地 <b>2.0 綠</b>；PT 系統接地 <b>5.5 綠</b>。',hold:2.6},
+      {t:'CT 外殼設備接地 <b>5.5 綠</b>；CT 系統接地 <b>5.5 綠</b>。',hold:2.6},
+      {t:'負載外殼設備接地 <b>5.5 綠</b>；箱體設備接地 <b>5.5 綠</b>。共六處接地。',hold:3}
+     ]}
+  ]
+});
+
+/* ---- 第8題專用繪圖 ---- */
+function q8svg(){
+  const M=(x,y,w,h,id,nm,unit)=>`
+    <g><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="5" fill="${C.sf}" stroke="${C.ln}" stroke-width="1.8"/>
+    <text x="${x+w/2}" y="${y+15}" fill="${C.mu}" font-size="10.5" text-anchor="middle">${nm}</text>
+    <text id="${id}" x="${x+w/2}" y="${y+h-19}" fill="${C.amb}" font-size="16" text-anchor="middle"
+      font-family="monospace">--</text>
+    <text x="${x+w/2}" y="${y+h-5}" fill="${C.dm}" font-size="9" text-anchor="middle">${unit}</text></g>`;
+  const gnd=(x,y,lab,sz)=>`
+    <g class="g4"><path d="M${x} ${y} L${x} ${y+16}" stroke="${C.okfg}" stroke-width="2"/>
+    <text x="${x+5}" y="${y+11}" fill="${C.okfg}" font-size="9">${lab} ${sz}</text></g>`;
+  return `<svg viewBox="0 0 920 610" xmlns="http://www.w3.org/2000/svg">
+  <!-- 主電路 -->
+  <g class="g1">
+    <text x="18" y="34" fill="${C.tx}" font-size="12" font-family="monospace">電源側</text>
+    <line x1="18" y1="56"  x2="800" y2="56"  stroke="${C.bus}" stroke-width="3.4"/>
+    <line x1="18" y1="92"  x2="800" y2="92"  stroke="${C.bus}" stroke-width="3.4"/>
+    <line x1="18" y1="128" x2="800" y2="128" stroke="${C.bus}" stroke-width="3.4"/>
+    <text x="10" y="52" fill="${C.red}" font-size="12" font-family="monospace">R</text>
+    <text x="10" y="88" fill="${C.wht}" font-size="12" font-family="monospace">S</text>
+    <text x="10" y="124" fill="${C.blu}" font-size="12" font-family="monospace">T</text>
+    <text x="596" y="26" fill="${C.mu}" font-size="10.5">主電路 8mm² 黑色絞線（三相三線）</text>
+    <rect x="800" y="38" width="104" height="108" rx="6" fill="${C.sf2}" stroke="${C.ln}" stroke-width="2"/>
+    <text x="852" y="88" fill="${C.tx}" font-size="13" text-anchor="middle">負載</text>
+    <text x="852" y="106" fill="${C.dm}" font-size="10" text-anchor="middle">3φ3W</text>
+  </g>
+  <!-- CT -->
+  <g class="g3">
+    <ellipse cx="380" cy="56" rx="17" ry="26" fill="none" stroke="${C.amb}" stroke-width="2.6"/>
+    <text x="380" y="18" fill="${C.amb}" font-size="10.5" text-anchor="middle">CT1 (R相)</text>
+    <ellipse cx="470" cy="128" rx="17" ry="26" fill="none" stroke="${C.amb}" stroke-width="2.6"/>
+    <text x="470" y="168" fill="${C.amb}" font-size="10.5" text-anchor="middle">CT2 (T相)</text>
+    <text x="560" y="152" fill="${C.ylw}" font-size="10">R、T 相繞 CT 一次側的匝數要符合規定</text>
+    <path d="M380 82 L380 300 L300 300" stroke="${C.tx}" stroke-width="2.2" fill="none"/>
+    <path d="M396 82 L396 316 L300 316" stroke="${C.tx}" stroke-width="2.2" fill="none"/>
+    <path d="M470 154 L470 332 L300 332" stroke="${C.tx}" stroke-width="2.2" fill="none"/>
+    <path d="M486 154 L486 348 L300 348" stroke="${C.tx}" stroke-width="2.2" fill="none"/>
+    <text x="500" y="300" fill="${C.mu}" font-size="10">電流回路 2mm² 黑色絞線（串聯）</text>
+    <!-- AS -->
+    <circle cx="240" cy="324" r="42" fill="${C.sf}" stroke="${C.ln}" stroke-width="2"/>
+    <text x="240" y="270" fill="${C.tx}" font-size="11.5" text-anchor="middle">AS 電流切換開關</text>
+    <line id="asPtr" x1="240" y1="324" x2="240" y2="288" stroke="${C.amb}" stroke-width="3.4" stroke-linecap="round"/>
+    <circle cx="240" cy="324" r="5" fill="${C.tx}"/>
+    <text id="asLbl" x="240" y="382" fill="${C.amb}" font-size="12" text-anchor="middle" font-family="monospace">R</text>
+    <path d="M198 324 L120 324" stroke="${C.tx}" stroke-width="2.2" fill="none"/>
+  </g>
+  <!-- PT / 電壓回路 -->
+  <g class="g2">
+    <path d="M120 56 L120 196" stroke="${C.ptR}" stroke-width="2.2" fill="none"/>
+    <path d="M180 92 L180 196" stroke="${C.ptR}" stroke-width="2.2" fill="none"/>
+    <path d="M240 128 L240 196" stroke="${C.ptR}" stroke-width="2.2" fill="none"/>
+    <rect x="104" y="196" width="152" height="40" rx="5" fill="${C.sf2}" stroke="${C.ptR}" stroke-width="2"/>
+    <text x="180" y="221" fill="${C.hotfg}" font-size="11.5" text-anchor="middle">PT ×2（V 結線）</text>
+    <text x="272" y="214" fill="${C.mu}" font-size="10">電壓回路 2mm² 紅色絞線（並聯）</text>
+    <path d="M140 236 L140 430 L410 430" stroke="${C.ptR}" stroke-width="2.2" fill="none"/>
+    <path d="M180 236 L180 446 L410 446" stroke="${C.ptR}" stroke-width="2.2" fill="none"/>
+    <path d="M220 236 L220 462 L410 462" stroke="${C.ptR}" stroke-width="2.2" fill="none"/>
+    <circle cx="470" cy="446" r="42" fill="${C.sf}" stroke="${C.ln}" stroke-width="2"/>
+    <text x="470" y="392" fill="${C.tx}" font-size="11.5" text-anchor="middle">VS 電壓切換開關</text>
+    <line id="vsPtr" x1="470" y1="446" x2="470" y2="410" stroke="${C.ptR}" stroke-width="3.4" stroke-linecap="round"/>
+    <circle cx="470" cy="446" r="5" fill="${C.tx}"/>
+    <text id="vsLbl" x="470" y="504" fill="${C.ptR}" font-size="12" text-anchor="middle" font-family="monospace">R-S</text>
+  </g>
+  <!-- 儀表 -->
+  ${M(560,196,112,72,'m_wh','瓦時計 WHM','kWh')}
+  ${M(688,196,112,72,'m_vh','乏時計 VARHM','kvarh')}
+  ${M(816,196,88,72,'m_pf','功因表 PF','cosφ')}
+  ${M(560,300,112,72,'m_v','電壓表 V','V')}
+  ${M(688,300,112,72,'m_a','電流表 A','A')}
+  <g class="g2"><path d="M512 446 L620 446 L620 364" stroke="${C.ptR}" stroke-width="2.2" fill="none"/></g>
+  <g class="g3"><path d="M282 324 L744 324 L744 364" stroke="${C.tx}" stroke-width="2.2" fill="none"/></g>
+  <!-- 接地 -->
+  <g class="g4">
+    <line x1="60" y1="560" x2="880" y2="560" stroke="${C.okfg}" stroke-width="5"/>
+    <text x="60" y="584" fill="${C.okfg}" font-size="11">接地銅排（全部使用綠色絞線）</text>
+    <path d="M104 236 L104 560" stroke="${C.okfg}" stroke-width="2"/>
+    <text x="110" y="300" fill="${C.okfg}" font-size="9.5">PT 外殼設備接地 2.0 綠</text>
+    <path d="M256 236 L256 560" stroke="${C.okfg}" stroke-width="2"/>
+    <text x="262" y="520" fill="${C.okfg}" font-size="9.5">PT 系統接地 5.5 綠</text>
+    <path d="M364 82 L340 82 L340 560" stroke="${C.okfg}" stroke-width="2"/>
+    <text x="346" y="200" fill="${C.okfg}" font-size="9.5">CT 外殼設備接地 5.5 綠</text>
+    <path d="M410 462 L410 540 L420 540 L420 560" stroke="${C.okfg}" stroke-width="2"/>
+    <path d="M486 348 L520 348 L520 560" stroke="${C.okfg}" stroke-width="2"/>
+    <text x="526" y="540" fill="${C.okfg}" font-size="9.5">CT 系統接地 5.5 綠</text>
+    <path d="M852 146 L852 560" stroke="${C.okfg}" stroke-width="2"/>
+    <text x="700" y="556" fill="${C.okfg}" font-size="9.5">負載外殼設備接地 5.5 綠</text>
+    <path d="M880 470 L900 470 L900 560" stroke="${C.okfg}" stroke-width="2"/>
+    <text x="760" y="466" fill="${C.okfg}" font-size="9.5">箱體設備接地 5.5 綠</text>
+  </g></svg>`;
+}
+function q8paint(S){
+  const svg=document.getElementById('diagram'); if(!svg) return;
+  const dim=(cls,on)=>{ const g=svg.querySelector('.'+cls);
+    if(g){ g.style.opacity=on?1:0.09; g.style.transition='opacity .25s'; } };
+  dim('g1',S.get('LY1')); dim('g2',S.get('LY2')); dim('g3',S.get('LY3')); dim('g4',S.get('LY4'));
+  const vi=S.get('VS1')?0:S.get('VS2')?1:S.get('VS3')?2:3;
+  const ai=S.get('AS1')?0:S.get('AS2')?1:S.get('AS3')?2:3;
+  const vp=svg.querySelector('#vsPtr'), ap=svg.querySelector('#asPtr');
+  if(vp) vp.setAttribute('transform',`rotate(${Q8VS[vi].a} 470 446)`);
+  if(ap) ap.setAttribute('transform',`rotate(${Q8AS[ai].a} 240 324)`);
+  const vl=svg.querySelector('#vsLbl'), al=svg.querySelector('#asLbl');
+  if(vl) vl.textContent=Q8VS[vi].n; if(al) al.textContent=Q8AS[ai].n;
+  const V=[221.4,219.8,220.6,0][vi], A=[38.2,37.6,38.9,0][ai];
+  const T=(id,v)=>{const e=svg.querySelector('#'+id); if(e) e.textContent=v;};
+  T('m_v',V?V.toFixed(1):'0.0'); T('m_a',A?A.toFixed(1):'0.0');
+  T('m_pf','0.86'); T('m_wh',(S.m.kwh||0).toFixed(1)); T('m_vh',(S.m.kvarh||0).toFixed(1));
+}
+/*__CIRCUITS__*/
+
+function loadCircuit(i){
+  G.cfg=CIRCUITS[i]; G.sim=new Sim(G.cfg); G.sc=0; G.step=-1; G.play=false;
+  document.getElementById('ctitle').textContent=G.cfg.title;
+  document.getElementById('cScene').style.display = G.cfg.scene? '':'none';
+  if(G.cfg.custom){ G.cfg.custom(); }
+  else { buildLadder(G.sim); }
+  buildControls(G.sim); buildLamps(G.sim); buildDevs(G.sim); buildScen(); syncPlay();
+  const hasP=!!G.cfg.power;
+  document.getElementById('power').style.display=(hasP&&G.view!=='ctl')?'':'none';
+  document.getElementById('diagram').style.display=(G.view==='pwr'&&hasP)?'none':'';
+  document.getElementById('vsel').style.display=hasP?'':'none';
+  [...document.querySelectorAll('#vsel button')].forEach(b=>b.classList.toggle('on',b.dataset.v===G.view));
+  document.getElementById('cLamps').style.display=(G.cfg.lampList||[]).length?'':'none';
+  document.getElementById('cDevs').style.display=(G.cfg._dl||[]).length?'':'none';
+  document.getElementById('narr').innerHTML = G.cfg.desc || '選擇情境開始，或直接操作。';
+  [...document.querySelectorAll('#tabs button')].forEach((b,k)=>b.classList.toggle('on',k===i));
+}
+function buildTabs(){
+  const n=document.getElementById('tabs'); n.innerHTML='';
+  CIRCUITS.forEach((c,i)=>{ const b=document.createElement('button');
+    b.textContent=c.tab; b.onclick=()=>loadCircuit(i); n.appendChild(b); });
+}
+let last=performance.now();
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  if(G.sim){
+    G.sim.tick(dt);
+    if(!G.cfg.custom) paintLadder(G.sim);
+    paintControls(G.sim); paintLamps(G.sim); paintDevs(G.sim);
+    if(G.cfg.scene) document.getElementById('scene').innerHTML=G.cfg.scene(G.sim);
+    if(G.cfg.power && G.view!=='ctl'){
+      const k=G.view==='pwr'?2.0:1.5;
+      document.getElementById('power').innerHTML='<p class="cap">主電路（動力電路）</p>'+
+        G.cfg.power(G.sim).replace(/viewBox="0 0 (\d+) (\d+)"/,
+          (m,w,h)=>`viewBox="0 0 ${w} ${h}" width="${Math.round(w*k)}" height="${Math.round(h*k)}"`);
+    }
+    if(G.cfg.paint) G.cfg.paint(G.sim);
+    if(G.play){
+      G.timer+=dt;
+      const sc=G.cfg.scenarios[G.sc], st=sc&&sc.steps[G.step];
+      const need = st? (st.hold||1.8) : 1.0;
+      const ready = st&&st.until ? st.until(G.sim) : true;
+      if(G.timer>need && ready) nextStep();
+      if(G.timer>18) nextStep();
+    }
+    document.getElementById('gstat').textContent =
+      G.cfg.scenarios&&G.cfg.scenarios[G.sc] ? `${G.step+1} / ${G.cfg.scenarios[G.sc].steps.length} 步` : '';
+  }
+  requestAnimationFrame(loop);
+}
+document.getElementById('scen').onchange=e=>{ G.sc=+e.target.value; G.step=-1; G.sim.reset();
+  const sc=G.cfg.scenarios[G.sc]; if(sc.setup) sc.setup(G.sim); renderSteps();
+  document.getElementById('narr').innerHTML=sc.intro||'按「下一步」開始逐步觀察。'; };
+[...document.querySelectorAll('#vsel button')].forEach(b=>b.onclick=()=>{
+  G.view=b.dataset.v; loadCircuit(CIRCUITS.indexOf(G.cfg)); });
+document.getElementById('bNext').onclick=nextStep;
+document.getElementById('bPrev').onclick=prevStep;
+document.getElementById('bReset').onclick=()=>{ G.sim.reset(); G.step=-1; G.play=false; syncPlay();
+  renderSteps(); document.getElementById('narr').innerHTML='電路已重置為初始狀態。'; };
+document.getElementById('bPlay').onclick=()=>{ G.play=!G.play; G.timer=99;
+  if(G.play&&G.step<0) gotoStep(0); syncPlay(); };
+
+
+document.getElementById('theme').onclick=()=>
+  setTheme(document.documentElement.getAttribute('data-theme')==='light'?'dark':'light');
+(function(){ let t=null;
+  try{ t=localStorage.getItem('s2theme'); }catch(e){}
+  if(!t) t = window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches ? 'light':'dark';
+  setTheme(t);
+})();
+buildTabs(); loadCircuit(0); requestAnimationFrame(loop);
+</script>
+</body>
+</html>
