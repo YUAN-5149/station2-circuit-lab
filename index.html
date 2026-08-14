@@ -957,8 +957,51 @@ function pwrHead(xs,y,live){
     + PW.bus3(xs,y+55,y+88,live);
 }
 
-/* ---- 第1、2題：正反轉兼 Y-Δ 主電路 ---- */
-function powerYD(S,revLbl){
+/* ---- 第1、2題：正反轉兼 Y-Δ 主電路（依官方試題圖 p.1 重繪） ---- */
+function powerYD(S){
+  const xs=[62,104,146];                       // R S T 主幹
+  const rx=[214,256,298];                      // MCR 換相支路
+  const F=S.get('MCF'), R=S.get('MCR'), Y=S.get('MCS'), D=S.get('MCD');
+  const T=S.get('THR'), live=(F||R)&&!T, run=live&&(Y||D);
+  let o=pwrHead(xs,30,true);                   // TB1 → NFB
+  // 換相支路：R→W、T→U（NFB 下方引出）
+  o+=PW.wire(xs[0],124,rx[2],124,true)+PW.wire(rx[2],124,rx[2],150,true)
+    +PW.wire(xs[1],131,rx[1],131,true)+PW.wire(rx[1],131,rx[1],150,true)
+    +PW.wire(xs[2],138,rx[0],138,true)+PW.wire(rx[0],138,rx[0],150,true)
+    +PW.dot(xs[0],124)+PW.dot(xs[1],131)+PW.dot(xs[2],138)
+    +PW.bus3(xs,120,150,true);
+  o+=PW.mc(0,158,xs,F,'MCF','L')+PW.mc(0,158,rx,R,'MCR','R');
+  // MCR 輸出併回主幹
+  o+=PW.bus3(rx,166,192,R)
+    +PW.wire(rx[0],192,xs[0],192,R)+PW.wire(rx[1],199,xs[1],199,R)+PW.wire(rx[2],206,xs[2],206,R)
+    +PW.wire(rx[0],192,rx[0],192,R)+PW.wire(rx[1],192,rx[1],199,R)+PW.wire(rx[2],192,rx[2],206,R);
+  o+=PW.bus3(xs,166,222,F||R);
+  o+=PW.thry(0,230,xs,T,'TH-RY')+PW.bus3(xs,240,266,live);
+  o+=PW.tb(xs[0]-24,266,(xs[2]-xs[0])+48,3,'TB2',['U','V','W']);
+  // 馬達（六線 U V W / X Y Z）
+  o+=PW.motor(104,336,run,'M','15HP')+PW.gnd(30,330)+PW.wire(30,284,30,330,false);
+  for(let i=0;i<3;i++) o+=PW.dash(xs[i],284,98+i*6,320);
+  o+=PW.tb(xs[0]-24,382,(xs[2]-xs[0])+48,3,'TB2',['X','Y','Z']);
+  for(let i=0;i<3;i++) o+=PW.dash(98+i*6,353,xs[i],382);
+  // MCD：U-Z、V-X、W-Y（Δ 接線）
+  const dx=[214,256,298];
+  o+=PW.wire(xs[0],290,dx[2],290,live)+PW.wire(dx[2],290,dx[2],328,live)
+    +PW.wire(xs[1],297,dx[1],297,live)+PW.wire(dx[1],297,dx[1],328,live)
+    +PW.wire(xs[2],304,dx[0],304,live)+PW.wire(dx[0],304,dx[0],328,live)
+    +PW.wire(xs[0],284,xs[0],290,live)+PW.wire(xs[1],284,xs[1],297,live)
+    +PW.wire(xs[2],284,xs[2],304,live);
+  o+=PW.mc(0,336,dx,D,'MCD','R');
+  o+=PW.wire(dx[0],344,dx[0],400,D)+PW.wire(dx[1],344,dx[1],394,D)+PW.wire(dx[2],344,dx[2],388,D)
+    +PW.wire(dx[0],400,xs[0],400,D)+PW.wire(dx[1],394,xs[1],394,D)+PW.wire(dx[2],388,xs[2],388,D);
+  // MCS：X-Y-Z 短接（Y 啟動中性點）
+  o+=PW.bus3(xs,400,436,Y);
+  o+=PW.mc(0,444,xs,Y,'MCS','L');
+  o+=PW.wire(xs[0],452,xs[0],470,Y)+PW.wire(xs[1],452,xs[1],470,Y)
+    +PW.wire(xs[2],452,xs[2],470,Y)+PW.wire(xs[0],470,xs[2],470,Y);
+  o+=PW.txt(xs[2]+22,474,Y?'X·Y·Z 短接（Y 啟動中性點）':'',C.red,10);
+  return `<svg viewBox="0 0 372 492" xmlns="http://www.w3.org/2000/svg">${o}</svg>`;
+}
+function powerYD_old(S){
   const xs=[54,92,130], F=S.get('MCF'), R=S.get('MCR'), Sy=S.get('MCS'), D=S.get('MCD');
   const live=F||R, run=(F||R)&&(Sy||D);
   let o=pwrHead(xs,32,true);
@@ -1135,10 +1178,10 @@ CIRCUITS.push({
     {s:[no('THR'),bz('BZ')],bypass:1},
     {s:[pnc('OFF'),par([pno('FWD')],[no('MCF','自保')]),nc('MCR','互鎖'),coil('MCF')]},
     {s:[pnc('OFF'),par([pno('REV')],[no('MCR','自保')]),nc('MCF','互鎖'),coil('MCR')]},
-    {s:[par([no('MCF')],[no('MCR')]),par([tnc('TR'),nc('MCD','互鎖'),coil('MCS')],[coil('TR')])]},
-    {s:[par([no('MCF')],[no('MCR')]),tno('TR'),nc('MCS','互鎖'),coil('MCD')]},
-    {s:[no('MCS'),lamp('YL','ylw')]},
-    {s:[no('MCD'),lamp('RL','red')]},
+    {s:[par([no('MCF')],[no('MCR')]),par(
+        [coil('TR')],
+        [tnc('TR'),nc('MCD','互鎖'),par([coil('MCS')],[lamp('YL','ylw')])],
+        [tno('TR'),nc('MCS','互鎖'),par([coil('MCD')],[lamp('RL','red')])])]},
     {s:[nc('MCF'),nc('MCR'),lamp('GL','okfg')],bypass:1}
   ],
   common:[nc('THR')],
