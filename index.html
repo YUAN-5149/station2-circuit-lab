@@ -1241,7 +1241,7 @@ CIRCUITS.push({
   railL:'R', railR:'T',
   devices:{
     FWD:{k:'in',n:'正轉按鈕'},REV:{k:'in',n:'反轉按鈕'},OFF:{k:'in',n:'停止按鈕'},
-    EMS:{k:'in',n:'緊急停止'},
+    EMS:{k:'in',n:'緊急停止'},THR:{k:'in',n:'積熱電驛'},
     MCF:{k:'relay',n:'正轉接觸器'},MCR:{k:'relay',n:'反轉接觸器'},
     MCS:{k:'relay',n:'Y 接線'},MCD:{k:'relay',n:'Δ 接線'},
     KR:{k:'keep',n:'轉向記憶'},
@@ -1254,7 +1254,8 @@ CIRCUITS.push({
   inputs:[
     {d:'FWD',n:'正轉',k:'mom',c:'grn'},{d:'REV',n:'反轉',k:'mom',c:'grn'},
     {d:'OFF',n:'停止',k:'mom',c:'red'},
-    {d:'EMS',n:'緊急停止(可長按)',k:'tog',c:'red',g:'保持型按鈕'}
+    {d:'EMS',n:'緊急停止(可長按)',k:'tog',c:'red',g:'保持型按鈕'},
+    {d:'THR',n:'過載跳脫',k:'tog',c:'ylw',g:'故障模擬'}
   ],
   lampList:[{d:'GL',n:'停止',c:'okfg'},{d:'R2',n:'Y啟動',c:'ylw'},
             {d:'R1',n:'正轉Δ',c:'red'},{d:'R3',n:'反轉Δ',c:'blu'}],
@@ -1267,11 +1268,12 @@ CIRCUITS.push({
     {s:[par([no('MCF')],[no('MCR')]),tno('TR1'),nc('MCS','互鎖'),coil('MCD')]},
     {s:[no('MCD'),coil('TR2')]},
     {s:[pno('OFF'),coil('TR3')]},
-    {s:[nc('MCF'),nc('MCR'),lamp('GL','okfg')]},
+    {s:[nc('MCF'),nc('MCR'),lamp('GL','okfg')],bypass:1},
     {s:[no('MCS'),lamp('R2','ylw')]},
     {s:[no('MCD'),no('MCF'),lamp('R1','red')]},
     {s:[no('MCD'),no('MCR'),lamp('R3','blu')]}
   ],
+  common:[nc('THR')],
   power(S){ return powerYD(S); },
   post(S,dt){
     const sp=S.get('MCD')?360:S.get('MCS')?150:0;
@@ -1409,10 +1411,12 @@ CIRCUITS.push({
     {s:[par([no('THR1')],[no('THR2')]),bz('BZ')],bypass:1},
     {s:[nc('THR1'),par(
         [no('COSM'),pnc('OFF1'),par([pno('ON1')],[no('MC1','自保')])],
-        [no('COSA'),no('FS'),nc('X','未滿水'),nc('MR','交替')]),nc('MC2','互鎖'),coil('MC1')]},
+        [no('COSA'),nc('MR','交替')]),no('FS','水源'),nc('X','未滿水'),
+        nc('MC2','互鎖'),coil('MC1')]},
     {s:[nc('THR2'),par(
         [no('COSM'),pnc('OFF2'),par([pno('ON2')],[no('MC2','自保')])],
-        [no('COSA'),no('FS'),nc('X'),no('MR','交替')]),nc('MC1','互鎖'),coil('MC2')]},
+        [no('COSA'),no('MR','交替')]),no('FS','水源'),nc('X'),
+        nc('MC1','互鎖'),coil('MC2')]},
     {s:[no('61F'),coil('X')]},
     {s:[no('X'),coil('MR')]},
     {s:[no('X'),lamp('G1','blu')]},
@@ -1529,7 +1533,7 @@ CIRCUITS.push({
         [no('COSM'),pnc('OFF2'),par([pno('ON2')],[no('MC2','自保')])],
         [no('COSA'),no('L1'),par([no('APN','交互')],[no('X','異常')],[no('MC2','自保')])]),coil('MC2')]},
     {s:[no('L2'),coil('X')]},
-    {s:[nc('L1','降至下限'),coil('APN')]},
+    {s:[nc('L1','降至下限'),coil('APN')]},   /* 交互電驛：初次受電後由 MC1 起動 */
     {s:[no('X'),lamp('YL','ylw')]},
     {s:[nc('MC1'),lamp('G1','okfg')]},
     {s:[nc('MC2'),lamp('G2','okfg')]},
@@ -1537,7 +1541,8 @@ CIRCUITS.push({
     {s:[no('MC2'),lamp('R2','org')]}
   ],
   power(S){ return power2M(S,'3HP'); },
-  init(S){ S.m.lv=6; S.set('COSM',true); },
+  init(S){ S.m.lv=6; S.set('COSM',true);
+    S.d('APN').on=false; S.d('APN').pc=true; },   /* 官方 5.(1)：自動首輪由 MC1 起動 */
   pre(S){
     const lv=S.m.lv||0;
     if(lv>=62) S.set('L1',true); else if(lv<=14) S.set('L1',false);
@@ -1627,12 +1632,13 @@ CIRCUITS.push({
     ON:{k:'in',n:'啟動按鈕'},OFF:{k:'in',n:'停止按鈕'},THR:{k:'in',n:'積熱電驛'},LS:{k:'in',n:'行程開關'},
     MC:{k:'relay',n:'運轉接觸器'},MCB:{k:'relay',n:'直流煞車'},
     X1:{k:'relay',n:'煞車控制'},X2:{k:'relay',n:'計數停止'},
-    TR1:{k:'ton',n:'煞車時間 t1',T:2.5},TR2:{k:'ton',n:'計數復歸 t2',T:2.5},
-    CNT:{k:'cnt',n:'COUNTER',preset:5},
+    TR1:{k:'ton',n:'煞車時間',T:3},TR2:{k:'ton',n:'Counter 復歸',T:3},
+    CNT:{k:'cnt',n:'COUNTER',preset:3},
     RL:{k:'lamp',n:'運轉'},YL:{k:'lamp',n:'煞車中'},BZ:{k:'bz',n:'蜂鳴器'}
   },
   inputs:[
     {d:'ON',n:'啟動',k:'mom',c:'grn'},{d:'OFF',n:'停止',k:'mom',c:'red'},
+    {d:'LS',n:'沖程 LS（按一次計數一次）',k:'mom',c:'',g:'計數輸入'},
     {d:'THR',n:'過載跳脫',k:'tog',c:'ylw',g:'故障模擬'}
   ],
   lampList:[{d:'RL',n:'運轉',c:'red'},{d:'YL',n:'煞車中',c:'ylw'},{d:'BZ',n:'蜂鳴器',c:'org'}],
@@ -1650,12 +1656,8 @@ CIRCUITS.push({
   common:[nc('THR')],
   power(S){ return power5(S); },
   init(S){ S.m.ram=0; },
-  post(S,dt){
-    if(S.get('MC')){
-      let p=(S.m.ram||0)+dt/1.1;
-      if(p>=1){ p-=1; S.tap('LS',0.14); }
-      S.m.ram=p;
-    }
+  post(S,dt){                       /* LS 由操作者按壓；沖頭僅作視覺呈現 */
+    if(S.get('MC')) S.m.ram=((S.m.ram||0)+dt/1.1)%1;
   },
   scene(S){
     const p=S.m.ram||0, run=S.get('MC');
@@ -1705,8 +1707,10 @@ CIRCUITS.push({
      steps:[
       {t:'3-1　按下 ON，MC 動作且自保持、RL 亮、M 開始運轉。',a:S=>S.tap('ON',.5),hold:2},
       {t:'3-2　同時 X1 動作且自保持。',hold:1.6},
-      {t:'3-3　LS 每作動一次，COUNTER 計數值上數 1 次…',hold:4,until:S=>S.d('CNT').cnt>=3},
-      {t:'3-4　當計數值到達設定值時接點動作，X2 及 TR2 動作並開始計時。',hold:2.5,until:S=>S.get('X2')},
+      {t:'3-3　按 LS 一次，Counter 螢幕指示 1 次。',a:S=>S.tap('LS',.3),hold:1.6},
+      {t:'　　　再按 LS 第 2 次。',a:S=>S.tap('LS',.3),hold:1.6},
+      {t:'3-4　按至第 3 次（設定值），Counter 接點動作 → X2 動作，TR2 激磁並計時（Counter Reset 時間）。',
+       a:S=>S.tap('LS',.3),hold:2.2,until:S=>S.get('X2')},
       {t:'3-5　此時 X2 的 b 接點切斷 MC → MC 復歸、RL 滅、馬達停止。',hold:1.6},
       {t:'3-6　接著 MCB 及 TR1 動作、開始煞車、YL 亮，TR1 開始計時…',hold:2},
       {t:'3-7　TR1 計時到，X1 復歸，MCB、TR1 也復歸，煞車停止、YL 滅。',hold:2.4,until:S=>!S.get('MCB')},
@@ -1727,19 +1731,19 @@ CIRCUITS.push({
     LS1:{k:'flag',n:'LS1 全開',hide:1},LS2:{k:'flag',n:'LS2 全閉',hide:1},
     X3:{k:'relay',n:'外側檢出'},X4:{k:'relay',n:'內側檢出'},
     MCF:{k:'relay',n:'開門正轉'},MCR:{k:'relay',n:'關門反轉'},
-    TR1:{k:'ton',n:'歡迎光臨 T1',T:3},TR2:{k:'ton',n:'謝謝光臨 T2',T:3},
-    TR3:{k:'ton',n:'TR1 解除',T:1.6},TR4:{k:'ton',n:'TR2 解除',T:1.6},
-    TR5:{k:'ton',n:'全開停留',T:2.5},
+    TR1:{k:'ton',n:'歡迎光臨 T1',T:2},TR2:{k:'ton',n:'謝謝惠顧 T2',T:2},
+    TR3:{k:'ton',n:'解除 TR1 自保',T:3},TR4:{k:'ton',n:'解除 TR2 自保',T:3},
+    TR5:{k:'ton',n:'全開後延時',T:2},
     X1:{k:'relay',n:'T1 到達'},X2:{k:'relay',n:'T2 到達'},
     R1:{k:'lamp',n:'開門'},R2:{k:'lamp',n:'關門'},
-    Y1:{k:'lamp',n:'歡迎光臨'},Y2:{k:'lamp',n:'謝謝光臨'},PH:{k:'lamp',n:'光電電源'}
+    Y1:{k:'lamp',n:'歡迎光臨'},Y2:{k:'lamp',n:'謝謝惠顧'},PH:{k:'lamp',n:'光電電源'}
   },
   inputs:[
     {d:'PH1',n:'外側遮光',k:'tog',c:'grn',g:'光電開關'},{d:'PH2',n:'內側遮光',k:'tog',c:'grn',g:'光電開關'},
     {d:'EMS',n:'緊急停止',k:'tog',c:'red',g:'保護裝置'},{d:'THR',n:'過載跳脫',k:'tog',c:'ylw',g:'保護裝置'}
   ],
   lampList:[{d:'PH',n:'光電電源',c:'blu'},{d:'R1',n:'開門',c:'red'},{d:'R2',n:'關門',c:'org'},
-            {d:'Y1',n:'歡迎光臨',c:'ylw'},{d:'Y2',n:'謝謝光臨',c:'okfg'}],
+            {d:'Y1',n:'歡迎光臨',c:'ylw'},{d:'Y2',n:'謝謝惠顧',c:'okfg'}],
   rungs:[
     {s:[no('PH1'),coil('X3')]},
     {s:[no('PH2'),coil('X4')]},
@@ -2121,10 +2125,10 @@ function q8paint(S){
   if(ap) ap.setAttribute('transform',`rotate(${Q8AS[ai].a} 240 324)`);
   const vl=svg.querySelector('#vsLbl'), al=svg.querySelector('#asLbl');
   if(vl) vl.textContent=Q8VS[vi].n; if(al) al.textContent=Q8AS[ai].n;
-  const V=[221.4,219.8,220.6,0][vi], A=[38.2,37.6,38.9,0][ai];
+  const V=[220,220,220,0][vi], A=[38.5,38.5,38.5,0][ai];
   const T=(id,v)=>{const e=svg.querySelector('#'+id); if(e) e.textContent=v;};
-  T('m_v',V?V.toFixed(1):'0.0'); T('m_a',A?A.toFixed(1):'0.0');
-  T('m_pf','0.86'); T('m_wh',(S.m.kwh||0).toFixed(1)); T('m_vh',(S.m.kvarh||0).toFixed(1));
+  T('m_v',V.toFixed(0)); T('m_a',A.toFixed(1));
+  T('m_pf','0.86 lag'); T('m_wh',(S.m.kwh||0).toFixed(1)); T('m_vh',(S.m.kvarh||0).toFixed(1));
 }
 /*__CIRCUITS__*/
 
