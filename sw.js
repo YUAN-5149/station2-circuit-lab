@@ -1,6 +1,6 @@
 /* 室乙第二站互動電路實驗室 — Service Worker
    應用殼層採 cache-first；導覽請求採 network-first 以便更新後立即生效。 */
-const VERSION = 'v5';
+const VERSION = 'v6';
 const CACHE = 'station2-' + VERSION;
 const SHELL = [
   './',
