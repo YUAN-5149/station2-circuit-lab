@@ -82,7 +82,8 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:14px;margin-top:
 .sym{stroke:var(--symc);stroke-width:2.4;fill:none;stroke-linecap:round}
 .sym.hot{stroke:var(--hot)}
 .sym.volt{stroke:var(--volt)}
-.tsym{fill:var(--symc)}
+.tsym{fill:none;stroke:var(--symc);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
+.tsym.hot{stroke:var(--hot)}
 .tagbg{fill:#ffb020}
 .brg{stroke:var(--hot);stroke-width:2.6;fill:none;opacity:0}
 .brg.on{opacity:1;filter:drop-shadow(0 0 4px rgba(255,68,54,.6))}
@@ -628,7 +629,7 @@ function symbol(g,el,x,y,sim){
     stub=12; lx=x+21;
     A('circle',{cx:x,cy:y-12,r:3.2,class:'term'});
     A('circle',{cx:x,cy:y+12,r:3.2,class:'term'});
-    A('path',{d:`M${x-21} ${y-8} L${x-8} ${y} L${x-21} ${y+8} Z`,class:'tsym'});
+    SY('path',{d:`M${x-21} ${y-8} L${x-8} ${y} L${x-21} ${y+8} Z`},'tsym');
     SY('line',{x1:x-8,y1:y,x2:x-1,y2:y},'sym');
     if(isNC) SY('line',{x1:x,y1:y-12,x2:x,y2:y+12},'sym');
     else     SY('line',{x1:x+7,y1:y-12,x2:x+7,y2:y+12},'sym');
