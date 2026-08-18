@@ -1350,7 +1350,7 @@ function motorSVG(sim,{dir,mode,label}){
        <text x="205" y="94" fill="${C.blu}" font-size="12" text-anchor="middle" font-family="monospace">Y 接線啟動</text>`
     : mode==='D'
     ? `<g stroke="${C.red}" stroke-width="2.4" fill="none">
-         <path d="M205 26 L226 68 L184 68 Z"/></g>
+         <path d="M205 26 L226 68 L184 68 Z" fill="none"/></g>
        <text x="205" y="94" fill="${C.red}" font-size="12" text-anchor="middle" font-family="monospace">Δ 接線運轉</text>`
     : `<text x="205" y="60" fill="${C.dm}" font-size="12" text-anchor="middle">未激磁</text>`;
   const arrow = run
@@ -1694,7 +1694,7 @@ CIRCUITS.push({
       ${pumpSVG(40,60,S.get('MC1'),'M1')}${pumpSVG(96,60,S.get('MC2'),'M2')}
       <path d="M40 47 L40 30 L150 30" stroke="${S.get('MC1')?C.red:C.wr}" stroke-width="2" fill="none"/>
       <path d="M96 47 L96 38 L150 38" stroke="${S.get('MC2')?C.org:C.wr}" stroke-width="2" fill="none"/>
-      <path d="M40 73 L40 96 M96 73 L96 96" stroke="${C.wr}" stroke-width="2"/>
+      <path d="M40 73 L40 96 M96 73 L96 96" stroke="${C.wr}" stroke-width="2" fill="none"/>
       <text x="187" y="132" fill="${C.tx}" font-size="11" text-anchor="middle"
         font-family="monospace">${Math.round(lv)}%</text>
       <text x="130" y="156" fill="${C.mu}" font-size="10" text-anchor="middle">交替電驛 MR ＝ 下次由 ${S.get('MR')?'M2':'M1'} 抽水</text>
@@ -1820,10 +1820,10 @@ CIRCUITS.push({
         {at:86,n:'BS2 異常',c:C.ylw,ex:22},{at:62,n:'BS1 上限',c:C.org,ex:48},
         {at:14,n:'下限',c:C.mu,ex:74}]})}
       ${pumpSVG(30,96,S.get('MC1'),'M1')}${pumpSVG(230,96,S.get('MC2'),'M2')}
-      <path d="M43 96 L66 96" stroke="${S.get('MC1')?C.red:C.wr}" stroke-width="2"/>
-      <path d="M217 96 L194 96" stroke="${S.get('MC2')?C.org:C.wr}" stroke-width="2"/>
-      <path d="M30 83 L30 40" stroke="${S.get('MC1')?C.red:C.wr}" stroke-width="2"/>
-      <path d="M230 83 L230 40" stroke="${S.get('MC2')?C.org:C.wr}" stroke-width="2"/>
+      <path d="M43 96 L66 96" stroke="${S.get('MC1')?C.red:C.wr}" stroke-width="2" fill="none"/>
+      <path d="M217 96 L194 96" stroke="${S.get('MC2')?C.org:C.wr}" stroke-width="2" fill="none"/>
+      <path d="M30 83 L30 40" stroke="${S.get('MC1')?C.red:C.wr}" stroke-width="2" fill="none"/>
+      <path d="M230 83 L230 40" stroke="${S.get('MC2')?C.org:C.wr}" stroke-width="2" fill="none"/>
       <text x="130" y="142" fill="${C.tx}" font-size="11" text-anchor="middle"
         font-family="monospace">水位 ${Math.round(lv)}%</text>
       <text x="130" y="156" fill="${C.mu}" font-size="10" text-anchor="middle">61F-APN2 交互 ＝ 本輪主泵 ${S.get('APN')?'M2':'M1'}</text>
@@ -2217,7 +2217,7 @@ CIRCUITS.push({
         stroke="${S.get('YL1')?C.ylw:C.tx}" stroke-width="3.4" stroke-linecap="round"/>
       <circle cx="130" cy="92" r="4" fill="${C.tx}"/>
       <text x="130" y="136" fill="${C.mu}" font-size="10" text-anchor="middle">ATS 自動切換開關</text>
-      <path d="M130 122 L130 146" stroke="${S.get('WL')||S.get('RL')?C.amb:C.wr}" stroke-width="2.4"/>
+      <path d="M130 122 L130 146" stroke="${S.get('WL')||S.get('RL')?C.amb:C.wr}" stroke-width="2.4" fill="none"/>
       <rect x="96" y="146" width="68" height="18" rx="4" fill="${C.sf2}" stroke="${C.ln}"/>
       <text x="130" y="159" fill="${S.get('WL')?C.wht:S.get('RL')?C.red:C.dm}"
         font-size="10" text-anchor="middle" font-family="monospace">
@@ -2341,7 +2341,7 @@ function q8svg(){
       font-family="monospace">--</text>
     <text x="${x+w/2}" y="${y+h-5}" fill="${C.dm}" font-size="9" text-anchor="middle">${unit}</text></g>`;
   const gnd=(x,y,lab,sz)=>`
-    <g class="g4"><path d="M${x} ${y} L${x} ${y+16}" stroke="${C.okfg}" stroke-width="2"/>
+    <g class="g4"><path d="M${x} ${y} L${x} ${y+16}" stroke="${C.okfg}" stroke-width="2" fill="none"/>
     <text x="${x+5}" y="${y+11}" fill="${C.okfg}" font-size="9">${lab} ${sz}</text></g>`;
   return `<svg viewBox="0 0 920 610" xmlns="http://www.w3.org/2000/svg">
   <!-- 主電路 -->
@@ -2407,18 +2407,18 @@ function q8svg(){
   <g class="g4">
     <line x1="60" y1="560" x2="880" y2="560" stroke="${C.okfg}" stroke-width="5"/>
     <text x="60" y="584" fill="${C.okfg}" font-size="11">接地銅排（全部使用綠色絞線）</text>
-    <path d="M104 236 L104 560" stroke="${C.okfg}" stroke-width="2"/>
+    <path d="M104 236 L104 560" stroke="${C.okfg}" stroke-width="2" fill="none"/>
     <text x="110" y="300" fill="${C.okfg}" font-size="9.5">PT 外殼設備接地 2.0 綠</text>
-    <path d="M256 236 L256 560" stroke="${C.okfg}" stroke-width="2"/>
+    <path d="M256 236 L256 560" stroke="${C.okfg}" stroke-width="2" fill="none"/>
     <text x="262" y="520" fill="${C.okfg}" font-size="9.5">PT 系統接地 5.5 綠</text>
-    <path d="M364 82 L340 82 L340 560" stroke="${C.okfg}" stroke-width="2"/>
+    <path d="M364 82 L340 82 L340 560" stroke="${C.okfg}" stroke-width="2" fill="none"/>
     <text x="346" y="200" fill="${C.okfg}" font-size="9.5">CT 外殼設備接地 5.5 綠</text>
-    <path d="M410 462 L410 540 L420 540 L420 560" stroke="${C.okfg}" stroke-width="2"/>
-    <path d="M486 348 L520 348 L520 560" stroke="${C.okfg}" stroke-width="2"/>
+    <path d="M410 462 L410 540 L420 540 L420 560" stroke="${C.okfg}" stroke-width="2" fill="none"/>
+    <path d="M486 348 L520 348 L520 560" stroke="${C.okfg}" stroke-width="2" fill="none"/>
     <text x="526" y="540" fill="${C.okfg}" font-size="9.5">CT 系統接地 5.5 綠</text>
-    <path d="M852 146 L852 560" stroke="${C.okfg}" stroke-width="2"/>
+    <path d="M852 146 L852 560" stroke="${C.okfg}" stroke-width="2" fill="none"/>
     <text x="700" y="556" fill="${C.okfg}" font-size="9.5">負載外殼設備接地 5.5 綠</text>
-    <path d="M880 470 L900 470 L900 560" stroke="${C.okfg}" stroke-width="2"/>
+    <path d="M880 470 L900 470 L900 560" stroke="${C.okfg}" stroke-width="2" fill="none"/>
     <text x="760" y="466" fill="${C.okfg}" font-size="9.5">箱體設備接地 5.5 綠</text>
   </g></svg>`;
 }
