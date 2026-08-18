@@ -16,7 +16,7 @@
   --sf:#1e2836; --sf2:#27313f; --sfh:#2f3a4b; --trk:#333d4e; --div:#38445a;
   --btn1:#2e3a4d; --btn2:#222c3b; --btnsh:#141a24;
   --dvon:#42201a; --dvonb:#8a3529; --dvonn:#ff9083; --dvons:#d09a92;
-  --acc:#ffb020; --accTx:#20160a; --capTx:#f5f8fc;
+  --acc:#ffb020; --accTx:#20160a; --capTx:#f5f8fc; --dockh:0px;
   --mono:ui-monospace,"Cascadia Mono",Consolas,"SF Mono",monospace;
   --sans:"Segoe UI","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
 }
@@ -157,6 +157,24 @@ body.fslock{overflow:hidden}
   padding:7px 15px;font-size:12px;color:var(--mut);pointer-events:none;
   opacity:0;transition:opacity .3s}
 .fshint.show{opacity:1}
+/* ---------- 手機：操作盤固定底部 ---------- */
+.dockt{display:none;background:none;border:1px solid var(--line2);color:var(--mut);
+  width:30px;height:24px;border-radius:6px;font-size:11px;cursor:pointer;line-height:1}
+@media(max-width:900px){
+  :root{--dockh:206px}
+  .dockt{display:block}
+  #cCtl{position:fixed;left:0;right:0;bottom:0;z-index:90;margin:0;
+    border-radius:14px 14px 0 0;border-bottom:0;max-height:44vh;
+    display:flex;flex-direction:column;
+    box-shadow:0 -6px 22px rgba(0,0,0,.30)}
+  #cCtl>.hd{flex:0 0 auto;cursor:pointer}
+  #cCtl>.bd{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+  #cCtl.min>.bd{display:none}
+  #cCtl.min .dockt{transform:rotate(180deg)}
+  body{padding-bottom:var(--dockh)}
+  #stage.fs{bottom:var(--dockh);inset-inline:0;top:0;height:auto}
+}
 @media(max-width:400px){
   button.pb{flex:1 1 calc(50% - 3px)}
   .seg button{padding:9px 3px;font-size:11px}
@@ -319,7 +337,13 @@ ol.steps li.done{color:var(--mut)}
 
     <aside>
       <div class="card" id="cScene"><div class="hd"><h3>現場設備狀態</h3></div><div class="bd" id="scene"></div></div>
-      <div class="card"><div class="hd"><h3>操作盤</h3><span class="sub" style="font-size:11px;color:var(--dim)">按鈕＝按住有效</span></div><div class="bd"><div class="ctl" id="controls"></div></div></div>
+      <div class="card" id="cCtl">
+        <div class="hd"><h3>操作盤</h3>
+          <span class="sub" style="font-size:11px;color:var(--dim)">按鈕＝按住有效</span>
+          <button type="button" class="dockt" id="bDock" aria-label="收合操作盤">▼</button>
+        </div>
+        <div class="bd"><div class="ctl" id="controls"></div></div>
+      </div>
       <div class="card" id="cLamps"><div class="hd"><h3>指示燈</h3></div><div class="bd"><div class="lamps" id="lamps"></div></div></div>
       <div class="card" id="cDevs"><div class="hd"><h3>元件動作狀態</h3></div><div class="bd"><div class="devs" id="devs"></div></div></div>
     </aside>
@@ -2519,6 +2543,28 @@ function loop(now){
 document.getElementById('scen').onchange=e=>{ G.sc=+e.target.value; G.step=-1; G.sim.reset();
   const sc=G.cfg.scenarios[G.sc]; if(sc.setup) sc.setup(G.sim); renderSteps();
   document.getElementById('narr').innerHTML=sc.intro||'按「下一步」開始逐步觀察。'; };
+/* ---------- 手機底部操作盤 ---------- */
+function dockH(){
+  const d=document.getElementById('cCtl');
+  if(!d) return;
+  const fixed=getComputedStyle(d).position==='fixed';
+  document.documentElement.style.setProperty('--dockh',
+    fixed ? Math.round(d.getBoundingClientRect().height)+8+'px' : '0px');
+}
+(function(){
+  const d=document.getElementById('cCtl'), b=document.getElementById('bDock');
+  const toggle=()=>{ d.classList.toggle('min');
+    try{ localStorage.setItem('s2dock', d.classList.contains('min')?'1':'0'); }catch(e){}
+    requestAnimationFrame(dockH); };
+  b.onclick=e=>{ e.stopPropagation(); toggle(); };
+  d.querySelector('.hd').onclick=e=>{ if(window.innerWidth<=900 && e.target!==b) toggle(); };
+  try{ if(localStorage.getItem('s2dock')==='1') d.classList.add('min'); }catch(e){}
+  window.addEventListener('resize',()=>setTimeout(dockH,80));
+  new ResizeObserver(dockH).observe(d);
+  dockH(); requestAnimationFrame(dockH);
+  window.addEventListener('load',dockH);
+})();
+
 /* ---------- 全螢幕檢視（手機可整張圖瀏覽） ---------- */
 const FS={on:false,x:0,y:0,z:1,px:0,py:0,pd:0};
 function fsFit(){
@@ -2526,7 +2572,10 @@ function fsFit(){
   if(!bd||!svg) return;
   const vb=svg.getAttribute('viewBox').split(' ');
   const W=+vb[2],H=+vb[3];
-  const z=Math.min(bd.clientWidth/(W+16),bd.clientHeight/(H+16));
+  const dk=document.getElementById('cCtl');
+  const dh=(dk&&getComputedStyle(dk).position==='fixed')?dk.getBoundingClientRect().height:0;
+  const avH=Math.max(80,bd.clientHeight-dh);
+  const z=Math.min(bd.clientWidth/(W+16),avH/(H+16));
   FS.z=Math.max(0.08,z); FS.x=(bd.clientWidth-W*FS.z)/2; FS.y=10;
   fsApply();
 }
@@ -2551,6 +2600,8 @@ function fsEnter(){
     const portrait = window.innerHeight > window.innerWidth && window.innerWidth <= 820;
     fsHint(portrait ? '手機轉橫向可看得更清楚 · 雙指縮放 · 點兩下還原'
                     : '雙指縮放 · 單指拖曳 · 點兩下還原'); });
+  const dk=document.getElementById('cCtl');
+  if(dk && window.innerWidth<=900){ dk._home=dk.parentNode; st.appendChild(dk); }
   if(st.requestFullscreen) st.requestFullscreen().catch(()=>{});
 }
 function fsExit(){
@@ -2558,6 +2609,8 @@ function fsExit(){
   FS.on=false; st.classList.remove('fs'); document.body.classList.remove('fslock');
   document.getElementById('bFs').textContent='⛶ 全螢幕';
   document.getElementById('diagram').style.transform='';
+  const dk=document.getElementById('cCtl');
+  if(dk && dk._home){ dk._home.appendChild(dk); dk._home=null; }
   if(document.fullscreenElement&&document.exitFullscreen) document.exitFullscreen().catch(()=>{});
   if(window.innerWidth<=760) fitZoom(); else { G.zoom=1; applyZoom(); }
 }
