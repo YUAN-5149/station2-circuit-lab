@@ -574,7 +574,8 @@ function symbol(g,el,x,y,sim){
         }
       }
     }
-    const nm=el.d+(el.a?'-'+el.a:'');
+    const nm = (d.kind==='keep'&&el.a) ? (el.a==='S'?'SC':'RC')
+             : el.d+(el.a?'-'+el.a:'');
     el._nm=A('text',{x,y:y+4,class:'cin'}); el._nmb='cin';
     el._nm.textContent=nm;
     if(nm.length>3) el._nm.setAttribute('font-size','9');
@@ -1458,9 +1459,9 @@ CIRCUITS.push({
     MCF:{k:'relay',n:'正轉接觸器'},MCR:{k:'relay',n:'反轉接觸器'},
     MCS:{k:'relay',n:'Y 接線'},MCD:{k:'relay',n:'Δ 接線'},
     KR:{k:'keep',n:'轉向記憶'},
-    TR1:{k:'ton',n:'Y-Δ 切換',T:3.5},
-    TR2:{k:'toff',n:'復電視窗 t2',T:4},
-    TR3:{k:'toff',n:'停止鎖定 t3',T:4},
+    TR1:{k:'ton',n:'Y-Δ 切換',T:3},
+    TR2:{k:'toff',n:'復電視窗 t2',T:2},
+    TR3:{k:'toff',n:'停止鎖定 t3',T:3},
     GL:{k:'lamp',n:'停止'},RL2:{k:'lamp',n:'Y 啟動'},
     RL1:{k:'lamp',n:'正轉Δ'},RL3:{k:'lamp',n:'反轉Δ'}
   },
@@ -1493,6 +1494,20 @@ CIRCUITS.push({
   ],
   common:[nc('THR')],
   power(S){ return powerYD(S); },
+  extraW:250,
+  extras(S,g,xs){
+    const a=xs[1], b=xs[2], y=g.coilY;
+    const on=S.get('KR');
+    const x0=a-46, x1=b+46;
+    return MOD.box(x0,y-34,x1-x0,72,'')
+      + MOD.txt((a+b)/2,y-42,'KR',on?C.red:C.mu,12,'middle')
+      + MOD.txt(g.xEx+16,g.TOPY+30,'KR：KEEP RELAY（保持電驛）',C.mu,11)
+      + MOD.txt(g.xEx+16,g.TOPY+50,'SC：KR SET COIL（正轉記憶）',C.dm,10)
+      + MOD.txt(g.xEx+16,g.TOPY+68,'RC：KR RESET COIL（反轉記憶）',C.dm,10)
+      + MOD.txt(g.xEx+16,g.TOPY+94,'目前記憶：'+(on?'正轉 FWD':'反轉 REV'),on?C.red:C.blu,11)
+      + MOD.txt(g.xEx+16,g.TOPY+124,'TR1、TR3：3 秒',C.dm,10)
+      + MOD.txt(g.xEx+16,g.TOPY+142,'TR2：2 秒（較 TR3 略短）',C.dm,10);
+  },
   post(S,dt){
     const sp=S.get('MCD')?360:S.get('MCS')?150:0;
     const d=S.get('MCF')?1:S.get('MCR')?-1:0;
@@ -1535,9 +1550,9 @@ CIRCUITS.push({
     {name:'3. 正轉Δ運轉時按 EMS，t2 內放開',
      steps:[
       {t:'先完成正轉 Y-Δ 啟動。',a:S=>S.tap('FWD',.5),hold:5,until:S=>S.get('MCD')},
-      {t:'3-1　按下 EMS，所有動作停止，但 TR2 及 KR 的接點尚未復歸…',a:S=>S.set('EMS',true),hold:2},
+      {t:'3-1　按下 EMS，所有動作停止，但 TR2 及 KR 的接點尚未復歸…',a:S=>S.set('EMS',true),hold:1.1},
       {t:'3-2　在 TR2 設定的時限內放開 EMS，MCF 經 TR2·KR 路徑恢復動作，繼續完成 Y-Δ 啟動…',
-       a:S=>S.set('EMS',false),hold:2},
+       a:S=>S.set('EMS',false),hold:1.6},
       {t:'3-3　Y 啟動：MCF 及 MCS 動作，馬達 Y 結線啟動，RL2 亮。',hold:2},
       {t:'3-4　TR1 時間到轉為 Δ 運轉，MCF 及 MCD 動作，RL1 亮。',hold:2.4,until:S=>S.get('MCD')}
      ]},
@@ -1545,7 +1560,7 @@ CIRCUITS.push({
      steps:[
       {t:'先完成正轉 Y-Δ 啟動。',a:S=>S.tap('FWD',.5),hold:5,until:S=>S.get('MCD')},
       {t:'4-1　按下 EMS，所有動作停止，但 TR2 及 KR 的接點尚未復歸…',a:S=>S.set('EMS',true),hold:2},
-      {t:'觀察 TR2 的復電視窗倒數歸零…',hold:4.6,until:S=>!S.d('TR2').held},
+      {t:'觀察 TR2 的復電視窗倒數歸零…',hold:2.6,until:S=>!S.d('TR2').held},
       {t:'4-2　在超過 TR2 設定的時限後才放開 EMS，MCF 不再動作，只有 GL 亮。',a:S=>S.set('EMS',false),hold:2.4}
      ]},
     {name:'5. 正轉Δ運轉時按 OFF',
@@ -1555,7 +1570,7 @@ CIRCUITS.push({
       {t:'5-2　除 GL 亮外其餘皆復歸，馬達停止，此時 TR2（Off-Delay）開始計時…',hold:2},
       {t:'5-3　放開 OFF，TR3 接點開始計時；t2 時間到接點復歸，在 t3 未到之前按任何按鍵皆無效。',
        a:S=>S.set('OFF',false),hold:2.6},
-      {t:'5-4　t3 時間到，TR3 接點復歸，電路才又回到初始狀態。',hold:3,until:S=>!S.d('TR3').held}
+      {t:'5-4　t3 時間到，TR3 接點復歸，電路才又回到初始狀態。',hold:3.4,until:S=>!S.d('TR3').held}
      ]},
     {name:'6. 反轉啟動到完成運轉',
      steps:[
@@ -1567,8 +1582,8 @@ CIRCUITS.push({
     {name:'8. 反轉Δ運轉時按 EMS，t2 內放開',
      steps:[
       {t:'先完成反轉 Y-Δ 啟動。',a:S=>S.tap('REV',.5),hold:5,until:S=>S.get('MCD')},
-      {t:'8-1　按下 EMS，所有動作停止，但 TR2 的接點尚未復歸…',a:S=>S.set('EMS',true),hold:2},
-      {t:'8-2　在 TR2 設定的時限內放開 EMS，MCR 恢復動作，繼續完成 Y-Δ 啟動。',a:S=>S.set('EMS',false),hold:2},
+      {t:'8-1　按下 EMS，所有動作停止，但 TR2 的接點尚未復歸…',a:S=>S.set('EMS',true),hold:1.1},
+      {t:'8-2　在 TR2 設定的時限內放開 EMS，MCR 恢復動作，繼續完成 Y-Δ 啟動。',a:S=>S.set('EMS',false),hold:1.6},
       {t:'8-3　Y 啟動：MCR 及 MCS 動作，馬達 Y 結線啟動，RL2 亮。',hold:2},
       {t:'8-4　Δ 運轉：MCR 及 MCD 動作，RL3 亮。',hold:2.4,until:S=>S.get('MCD')}
      ]}
