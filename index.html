@@ -1148,27 +1148,62 @@ function powerYD_old(S){
 }
 
 /* ---- 第3、4題：兩台電動機主電路 ---- */
+/* ---- 第3題主電路（官方 p.5：單一 NFB → MS1／MS2 電磁開關） ---- */
 function power2M(S,hp){
-  const xs=[54,92,130], zs=[210,248,286];
+  const xs=[62,104,146], zs=[228,270,312];
   const a=S.get('MC1'), b=S.get('MC2');
   let o=pwrHead(xs,32,true);
   o+=PW.wire(xs[0],120,zs[0],120,true)+PW.wire(xs[1],126,zs[1],126,true)
     +PW.wire(xs[2],132,zs[2],132,true);
   o+=PW.bus3(zs,120,170,true)+PW.bus3(xs,120,170,true);
-  o+=PW.box(30,168,124,116,'MS1')+PW.box(186,168,124,116,'MS2');
+  o+=MOD.box(34,168,142,116,'MS1')+MOD.box(200,168,142,116,'MS2');
   o+=PW.mc(0,192,xs,a,'MC1','L')+PW.mc(0,192,zs,b,'MC2','R');
   o+=PW.bus3(xs,197,246,a)+PW.bus3(zs,197,246,b);
   o+=PW.thry(0,252,xs,S.get('THR1'),'')+PW.thry(0,252,zs,S.get('THR2'),'');
+  o+=PW.txt(xs[0]-30,196,'MC1',S.get('MC1')?C.red:C.mu,11,'end');
   o+=PW.txt(xs[2]+16,262,'TH-RY1',S.get('THR1')?C.amb:C.dm,10)
     +PW.txt(zs[2]+16,262,'TH-RY2',S.get('THR2')?C.amb:C.dm,10);
   const A=a&&!S.get('THR1'), B=b&&!S.get('THR2');
   o+=PW.bus3(xs,262,300,A)+PW.bus3(zs,262,300,B);
-  o+=PW.tb(xs[0]-22,300,(xs[2]-xs[0])+44,3,'TB2')+PW.tb(zs[0]-22,300,(zs[2]-zs[0])+44,3,'TB5');
-  o+=PW.motor(92,368,A,'M1',hp)+PW.motor(248,368,B,'M2',hp);
-  for(let i=0;i<3;i++){ o+=PW.dash(xs[i],318,86+i*6,352)+PW.dash(zs[i],318,242+i*6,352); }
-  o+=PW.gnd(28,352)+PW.wire(28,318,28,352,false)
-    +PW.gnd(184,352)+PW.wire(184,318,184,352,false);
-  return `<svg viewBox="0 0 350 420" xmlns="http://www.w3.org/2000/svg">${o}</svg>`;
+  o+=MOD.tb(xs[0]-24,300,(xs[2]-xs[0])+48,3,'TB2')+MOD.tb(zs[0]-24,300,(zs[2]-zs[0])+48,3,'TB5');
+  o+=PW.motor(104,372,A,'M1',hp)+PW.motor(270,372,B,'M2',hp);
+  for(let i=0;i<3;i++){ o+=PW.dash(xs[i],316,98+i*6,356)+PW.dash(zs[i],316,264+i*6,356); }
+  o+=PW.gnd(34,356)+PW.wire(34,316,34,356,false)
+    +PW.gnd(200,356)+PW.wire(200,316,200,356,false);
+  return `<svg viewBox="0 0 400 420" xmlns="http://www.w3.org/2000/svg">${o}</svg>`;
+}
+
+
+/* ---- 第4題主電路（官方 p.7：NFB3 總開關 → TB1 → NFB1／NFB2） ---- */
+function power4M(S){
+  const xs=[62,104,146], zs=[224,266,308];
+  const a=S.get('MC1'), b=S.get('MC2'), t1=S.get('THR1'), t2=S.get('THR2');
+  const A=a&&!t1, B=b&&!t2;
+  let o=PW.txt(xs[0]-24,20,'3φ 3W 220V',C.mu,11);
+  for(const px of xs) o+=`<path d="M${px} 46 L${px} 28 M${px-5} 34 L${px} 27 L${px+5} 34"
+      stroke="${C.red}" stroke-width="2.2" fill="none"/>`;
+  o+=PW.nfb(0,60,xs,true)+PW.txt(xs[2]+52,64,'3',C.mu,10);
+  o+=PW.bus3(xs,71,96,true)+MOD.tb(xs[0]-24,96,(xs[2]-xs[0])+48,3,'TB1');
+  o+=PW.bus3(xs,112,140,true);
+  o+=PW.wire(xs[0],126,zs[0],126,true)+PW.wire(xs[1],133,zs[1],133,true)
+    +PW.wire(xs[2],140,zs[2],140,true)+PW.bus3(zs,126,166,true)
+    +PW.dot(xs[0],126)+PW.dot(xs[1],133)+PW.dot(xs[2],140);
+  o+=PW.nfb(0,176,xs,true)+PW.txt(xs[2]+52,180,'1',C.mu,10)
+    +PW.nfb(0,176,zs,true)+PW.txt(zs[2]+52,180,'2',C.mu,10);
+  o+=PW.bus3(xs,187,222,true)+PW.bus3(zs,187,222,true);
+  o+=PW.mc(0,230,xs,a,'MC1','L')+PW.mc(0,230,zs,b,'MC2','R');
+  o+=PW.bus3(xs,238,282,a)+PW.bus3(zs,238,282,b);
+  o+=PW.thry(0,290,xs,t1,'')+PW.thry(0,290,zs,t2,'');
+  o+=PW.txt(xs[2]+16,300,'TH-RY1',t1?C.amb:C.dm,10)
+    +PW.txt(zs[2]+16,300,'TH-RY2',t2?C.amb:C.dm,10);
+  o+=PW.bus3(xs,300,338,A)+PW.bus3(zs,300,338,B);
+  o+=MOD.tb(xs[0]-24,338,(xs[2]-xs[0])+48,3,'TB2')
+    +MOD.tb(zs[0]-24,338,(zs[2]-zs[0])+48,3,'TB6');
+  o+=PW.motor(104,406,A,'M1','5HP')+PW.motor(266,406,B,'M2','5HP');
+  for(let i=0;i<3;i++){ o+=PW.dash(xs[i],354,98+i*6,390)+PW.dash(zs[i],354,260+i*6,390); }
+  o+=PW.gnd(34,388)+PW.wire(34,354,34,388,false)
+    +PW.gnd(196,388)+PW.wire(196,354,196,388,false);
+  return `<svg viewBox="0 0 396 452" xmlns="http://www.w3.org/2000/svg">${o}</svg>`;
 }
 
 /* ---- 第5題：沖床機 ＋ 直流煞車主電路 ---- */
@@ -1204,6 +1239,7 @@ function power5(S){
   o+=PW.wire(bx-20,410,bx-20,428,B)+PW.wire(bx+20,410,bx+20,428,B);
   o+=PW.wire(bx-20,428,xs[0],428,B)+PW.wire(xs[0],428,xs[0],308,B&&false);
   o+=PW.txt(bx-46,446,B?'直流煞車電流注入定子':'',C.red,10);
+  o+=PW.txt(14,462,'直流部分 3.5mm² 藍色線 ×5　主電路交流 3.5mm² 黑色線 ×4',C.dm,9.5);
   return `<svg viewBox="0 0 300 470" xmlns="http://www.w3.org/2000/svg">${o}</svg>`;
 }
 
@@ -1735,7 +1771,7 @@ CIRCUITS.push({
     {s:[no('MC1'),lamp('RL1','red')]},
     {s:[no('MC2'),lamp('RL2','org')]}
   ],
-  power(S){ return power2M(S,'3HP'); },
+  power(S){ return power4M(S); },
   extraW:470,
   extras(S,g,xs){
     const x=g.xEx+16, y=g.TOPY+16, hi=S.get('L1'), ab=S.get('L2');
@@ -2084,15 +2120,15 @@ CIRCUITS.push({
     TR1:{k:'toff',n:'停電確認 t1',T:3},TR2:{k:'ton',n:'復電確認 t2',T:2.5},
     TR3:{k:'ton',n:'發電機停機 t3',T:3},TR4:{k:'ton',n:'發電機穩定 t4',T:2.5},
     TMF:{k:'relay',n:'TM 轉向台電'},TMR:{k:'relay',n:'TM 轉向備用'},
-    W:{k:'lamp',n:'常用供電'},R:{k:'lamp',n:'備用供電'},
-    Y1:{k:'lamp',n:'ATS 轉動中'},Y2:{k:'lamp',n:'發電機運轉'}
+    WL:{k:'lamp',n:'常用電源供電'},RL:{k:'lamp',n:'備用電源供電'},
+    YL1:{k:'lamp',n:'ATS 轉動中'},YL2:{k:'lamp',n:'發電機模擬'}
   },
   inputs:[
     {d:'NFB1',n:'常用電源 ON',k:'tog',c:'grn',g:'電源開關'},
     {d:'NFB2',n:'備用電源 ON',k:'tog',c:'grn',g:'電源開關'}
   ],
-  lampList:[{d:'W',n:'常用供電',c:'wht'},{d:'R',n:'備用供電',c:'red'},
-            {d:'Y1',n:'ATS轉動',c:'ylw'},{d:'Y2',n:'發電機',c:'okfg'}],
+  lampList:[{d:'WL',n:'常用供電',c:'wht'},{d:'RL',n:'備用供電',c:'red'},
+            {d:'YL1',n:'ATS轉動',c:'ylw'},{d:'YL2',n:'發電機',c:'okfg'}],
   rungs:[
     {s:[no('NFB1'),coil('X1')]},
     {s:[no('X1'),coil('TR1')]},
@@ -2104,11 +2140,36 @@ CIRCUITS.push({
     {s:[no('X2'),nc('LSA','到位停'),coil('TMF')]},
     {s:[no('X3'),nc('LSB','到位停'),coil('TMR')]},
     {s:[no('LSA'),no('X1'),coil('TR3')]},
-    {s:[no('LSA'),no('X1'),lamp('W','wht')]},
-    {s:[no('LSB'),nc('X1'),lamp('R','red')]},
-    {s:[par([no('TMF')],[no('TMR')]),lamp('Y1','ylw')]},
-    {s:[no('X4'),lamp('Y2','okfg')]}
+    {s:[no('LSA'),no('X1'),lamp('WL','wht')]},
+    {s:[no('LSB'),nc('X1'),lamp('RL','red')]},
+    {s:[par([no('TMF')],[no('TMR')]),lamp('YL1','ylw')]},
+    {s:[no('NFB2'),par([no('X4')],[nc('X1','市電停')]),lamp('YL2','okfg')]}
   ],
+  extraW:330,
+  extras(S,g,xs){
+    const x=g.xEx+18, y=g.TOPY+26, a=S.m.ats||0;
+    const A=S.get('LSA'), B=S.get('LSB'), mv=S.get('TMF')||S.get('TMR');
+    const sw=(px,py,on,lab)=>
+      `<circle cx="${px}" cy="${py-13}" r="3.2" fill="none" stroke="${C.symc}" stroke-width="1.5"/>`
+      +`<circle cx="${px}" cy="${py+13}" r="3.2" fill="none" stroke="${C.symc}" stroke-width="1.5"/>`
+      +`<rect x="${px-4}" y="${py-9}" width="8" height="18" rx="1.5"
+          fill="${on?C.red:C.sf}" stroke="${on?C.red:C.symc}" stroke-width="1.6"/>`
+      +`<text x="${px}" y="${py+34}" fill="${on?C.red:C.dm}" font-size="10"
+          text-anchor="middle" font-family="monospace">${lab}</text>`;
+    const ang=-52+104*(a/100);
+    return MOD.box(x,y,290,196,'','dashdot')
+      + MOD.txt(x+10,y+18,'ATS 盤內元件',C.mu,11)
+      + sw(x+56,y+58,B,'LSB 備用側') + sw(x+234,y+58,A,'LSA 台電側')
+      + `<circle cx="${x+145}" cy="${y+118}" r="34" fill="${C.sf}" stroke="${C.ln}" stroke-width="2"/>`
+      + `<line x1="${x+145}" y1="${y+118}" x2="${x+145+28*Math.sin(ang*Math.PI/180)}"
+           y2="${y+118-28*Math.cos(ang*Math.PI/180)}" stroke="${mv?C.ylw:C.tx}"
+           stroke-width="3.4" stroke-linecap="round"/>`
+      + `<circle cx="${x+145}" cy="${y+118}" r="4.5" fill="${C.tx}"/>`
+      + MOD.txt(x+145,y+170,'TM 切換馬達',mv?C.ylw:C.mu,10.5,'middle')
+      + MOD.txt(x+145,y+186,mv?(S.get('TMF')?'▶ 轉向台電側':'◀ 轉向備用側'):'停止',
+          mv?C.ylw:C.dm,10,'middle')
+      + MOD.txt(x,y+218,'常用電源 R1·T1 → TB1 ／ 備用電源 R2·T2 → TB1',C.dm,9.5);
+  },
   init(S){ S.m.ats=0; S.set('NFB2',true); S.set('NFB1',false); },
   pre(S){ const a=S.m.ats||0; S.set('LSA',a>=99.5); S.set('LSB',a<=0.5); },
   post(S,dt){
@@ -2140,11 +2201,11 @@ CIRCUITS.push({
         stroke="${S.get('YL1')?C.ylw:C.tx}" stroke-width="3.4" stroke-linecap="round"/>
       <circle cx="130" cy="92" r="4" fill="${C.tx}"/>
       <text x="130" y="136" fill="${C.mu}" font-size="10" text-anchor="middle">ATS 自動切換開關</text>
-      <path d="M130 122 L130 146" stroke="${S.get('W')||S.get('R')?C.amb:C.wr}" stroke-width="2.4"/>
+      <path d="M130 122 L130 146" stroke="${S.get('WL')||S.get('RL')?C.amb:C.wr}" stroke-width="2.4"/>
       <rect x="96" y="146" width="68" height="18" rx="4" fill="${C.sf2}" stroke="${C.ln}"/>
-      <text x="130" y="159" fill="${S.get('W')?C.wht:S.get('R')?C.red:C.dm}"
+      <text x="130" y="159" fill="${S.get('WL')?C.wht:S.get('RL')?C.red:C.dm}"
         font-size="10" text-anchor="middle" font-family="monospace">
-        ${S.get('W')?'常用供電':S.get('R')?'備用供電':'負載無電'}</text>
+        ${S.get('WL')?'常用供電':S.get('RL')?'備用供電':'負載無電'}</text>
       <text x="46" y="112" fill="${S.get('LSB')?C.amb:C.ln}" font-size="9">LSB ${S.get('LSB')?'●':'○'}</text>
       <text x="196" y="112" fill="${S.get('LSA')?C.amb:C.ln}" font-size="9">LSA ${S.get('LSA')?'●':'○'}</text>
     </svg>`;
@@ -2175,7 +2236,7 @@ CIRCUITS.push({
     {name:'3. 備用電源供電中，常用電源復電',
      setup:S=>{S.set('NFB1',false);S.set('NFB2',true);S.m.ats=0;},
      steps:[
-      {t:'目前由備用電源供電（R 亮、Y2 亮、ATS 在備用側）。',hold:3,until:S=>S.get('R')},
+      {t:'目前由備用電源供電（R 亮、Y2 亮、ATS 在備用側）。',hold:3,until:S=>S.get('RL')},
       {t:'10　備用電源供電當中市電恢復（NFB1 ON）：X1、TR1、TR2、X4 皆動作，TR2 開始計時…',
        a:S=>S.set('NFB1',true),hold:2},
       {t:'11　同時 X1 的 b 接點使 TR4、X3 復歸、R 滅，TR1 接點也立刻開路。',hold:2.2},
