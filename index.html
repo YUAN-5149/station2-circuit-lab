@@ -140,6 +140,23 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:14px;margin-top:
   .devs{grid-template-columns:repeat(auto-fill,minmax(70px,1fr))}
   .pwrbox{padding:0 0 12px}
 }
+/* ---------- 全螢幕檢視 ---------- */
+#stage.fs{position:fixed;inset:0;z-index:80;margin:0;border-radius:0;border:0;
+  display:flex;flex-direction:column;background:var(--panel)}
+#stage.fs>.bd{flex:1 1 auto;max-height:none;height:auto;padding:0;
+  touch-action:none;overscroll-behavior:contain}
+#stage.fs .wrap2{gap:0}
+#stage.fs #diagram{transform-origin:0 0}
+#stage.fs .pwrbox,#stage.fs .vsel,#stage.fs .legend{display:none}
+#stage.fs .fsonly{display:inline-flex}
+body.fslock{overflow:hidden}
+.fsonly{display:none}
+#stage.fs .hd{position:sticky;top:0;z-index:2}
+.fshint{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:81;
+  background:var(--panel2);border:1px solid var(--line2);border-radius:20px;
+  padding:7px 15px;font-size:12px;color:var(--mut);pointer-events:none;
+  opacity:0;transition:opacity .3s}
+.fshint.show{opacity:1}
 @media(max-width:400px){
   button.pb{flex:1 1 100%}
   .seg button{padding:9px 3px;font-size:11px}
@@ -277,6 +294,7 @@ ol.steps li.done{color:var(--mut)}
           <span class="pct" id="zpct">100%</span>
           <button type="button" data-z="+" aria-label="放大">＋</button>
           <button type="button" data-z="fit" class="fit">適合寬度</button>
+          <button type="button" data-z="fs" class="fit" id="bFs">⛶ 全螢幕</button>
         </div>
         <div class="seg vsel" id="vsel">
           <button data-v="all">全圖</button><button data-v="pwr">主電路</button><button data-v="ctl">控制電路</button>
@@ -734,13 +752,13 @@ function buildLadder(sim){
   for(const r of cfg.rungs){ r._m=measure(r.s); maxSer=Math.max(maxSer,r._m.w); }
   for(const r of cfg.rungs){ const w=Math.max(1,r._m.h)*PAR; xs.push(cur+w/2); cur+=w; }
   const coilY=TOPY+(maxSer-0.5)*SER;
-  const bot=coilY+COILDROP;
+  const bot=coilY+COILDROP+(cfg.common?1.7*SER:0);
   const xEx=cur+30;                         /* 盤內模組專屬區（右側保留） */
   const W=cur+46+(cfg.extraW||0), H=bot+52;
   const svg=mk('svg',{viewBox:`0 0 ${W} ${H}`,xmlns:SVGNS});
   const g=mk('g'); svg.appendChild(g);
 
-  const cm=cfg.common, colY = cm ? bot-2.2*SER : bot;
+  const cm=cfg.common, colY = cm ? coilY+0.62*SER : bot;
   cfg.rungs.forEach((r,i)=>place(g,r.s,xs[i],TOPY,sim,
     {coilY,bot:(cm&&!r.bypass)?colY:bot},true));
   if(cm){
@@ -750,7 +768,7 @@ function buildLadder(sim){
     cfg._col=mk('line',{x1:lo,y1:colY,x2:hi,y2:colY,class:'w'});
     g.appendChild(cfg._col);
     for(const x of xs) if(x>=lo&&x<=hi) dot(g,x,colY);
-    place(g,cm,cx,colY,sim,{coilY:colY+1.2*SER,bot},true);
+    place(g,cm,cx,colY,sim,{coilY:colY+0.62*SER,bot},true);
   }
 
   const ms=cfg.master||[];
@@ -932,8 +950,9 @@ function fitZoom(){
   const pw=document.getElementById('power');
   const side=(pw&&pw.offsetParent&&window.innerWidth>900)?pw.offsetWidth:0;
   const avail=bd.clientWidth-side-46;
-  /* 下限 50%：低於此字就看不清，改由橫向捲動閱讀 */
-  G.zoom=Math.max(0.5,Math.min(1,avail/W)); applyZoom();
+  /* 依容器寬（而非視窗寬）決定下限：窄容器先求看到全貌，細節用全螢幕放大 */
+  const floor = bd.clientWidth < 900 ? 0.1 : 0.35;
+  G.zoom=Math.max(floor,Math.min(1,avail/W)); applyZoom();
 }
 
 function buildScen(){
@@ -2457,7 +2476,8 @@ function loadCircuit(i){
   document.getElementById('cDevs').style.display=(G.cfg._dl||[]).length?'':'none';
   document.getElementById('narr').innerHTML = G.cfg.desc || '選擇情境開始，或直接操作。';
   [...document.querySelectorAll('#tabs button')].forEach((b,k)=>b.classList.toggle('on',k===i));
-  if(!G.cfg.custom){ if(window.innerWidth<=760) fitZoom(); else { G.zoom=1; applyZoom(); } }
+  if(typeof FS!=='undefined'&&FS.on){ fsFit(); requestAnimationFrame(fsFit); }
+  else if(!G.cfg.custom){ if(window.innerWidth<=760) fitZoom(); else { G.zoom=1; applyZoom(); } }
 }
 function buildTabs(){
   const n=document.getElementById('tabs'); n.innerHTML='';
@@ -2495,9 +2515,95 @@ function loop(now){
 document.getElementById('scen').onchange=e=>{ G.sc=+e.target.value; G.step=-1; G.sim.reset();
   const sc=G.cfg.scenarios[G.sc]; if(sc.setup) sc.setup(G.sim); renderSteps();
   document.getElementById('narr').innerHTML=sc.intro||'按「下一步」開始逐步觀察。'; };
+/* ---------- 全螢幕檢視（手機可整張圖瀏覽） ---------- */
+const FS={on:false,x:0,y:0,z:1,px:0,py:0,pd:0};
+function fsFit(){
+  const bd=document.querySelector('#stage .bd'),svg=document.querySelector('#diagram svg');
+  if(!bd||!svg) return;
+  const vb=svg.getAttribute('viewBox').split(' ');
+  const W=+vb[2],H=+vb[3];
+  const z=Math.min(bd.clientWidth/(W+16),bd.clientHeight/(H+16));
+  FS.z=Math.max(0.08,z); FS.x=(bd.clientWidth-W*FS.z)/2; FS.y=10;
+  fsApply();
+}
+function fsApply(){
+  const d=document.getElementById('diagram');
+  d.style.transform=`translate(${FS.x}px,${FS.y}px) scale(${FS.z})`;
+  const p=document.getElementById('zpct'); if(p) p.textContent=Math.round(FS.z*100)+'%';
+}
+function fsHint(t){
+  let h=document.querySelector('.fshint');
+  if(!h){ h=document.createElement('div'); h.className='fshint'; document.body.appendChild(h); }
+  h.textContent=t; h.classList.add('show');
+  clearTimeout(h._t); h._t=setTimeout(()=>h.classList.remove('show'),2600);
+}
+function fsEnter(){
+  const st=document.getElementById('stage');
+  FS.on=true; st.classList.add('fs'); document.body.classList.add('fslock');
+  document.getElementById('bFs').textContent='✕ 離開全螢幕';
+  const svg=document.querySelector('#diagram svg');
+  if(svg){ svg.style.width=''; svg.style.minWidth='0'; }
+  requestAnimationFrame(()=>{ fsFit();
+    const portrait = window.innerHeight > window.innerWidth && window.innerWidth <= 820;
+    fsHint(portrait ? '手機轉橫向可看得更清楚 · 雙指縮放 · 點兩下還原'
+                    : '雙指縮放 · 單指拖曳 · 點兩下還原'); });
+  if(st.requestFullscreen) st.requestFullscreen().catch(()=>{});
+}
+function fsExit(){
+  const st=document.getElementById('stage');
+  FS.on=false; st.classList.remove('fs'); document.body.classList.remove('fslock');
+  document.getElementById('bFs').textContent='⛶ 全螢幕';
+  document.getElementById('diagram').style.transform='';
+  if(document.fullscreenElement&&document.exitFullscreen) document.exitFullscreen().catch(()=>{});
+  if(window.innerWidth<=760) fitZoom(); else { G.zoom=1; applyZoom(); }
+}
+(function(){
+  const bd=document.querySelector('#stage .bd');
+  const dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
+  const mid=t=>({x:(t[0].clientX+t[1].clientX)/2,y:(t[0].clientY+t[1].clientY)/2});
+  bd.addEventListener('touchstart',e=>{
+    if(!FS.on) return;
+    if(e.touches.length===2){ FS.pd=dist(e.touches); const m=mid(e.touches);
+      FS.px=m.x; FS.py=m.y; }
+    else if(e.touches.length===1){ FS.px=e.touches[0].clientX; FS.py=e.touches[0].clientY; }
+  },{passive:true});
+  bd.addEventListener('touchmove',e=>{
+    if(!FS.on) return;
+    e.preventDefault();
+    const r=bd.getBoundingClientRect();
+    if(e.touches.length===2){
+      const d=dist(e.touches),m=mid(e.touches);
+      if(FS.pd>0){
+        const k=d/FS.pd, nz=Math.max(0.08,Math.min(6,FS.z*k));
+        const cx=m.x-r.left,cy=m.y-r.top;
+        FS.x=cx-(cx-FS.x)*(nz/FS.z); FS.y=cy-(cy-FS.y)*(nz/FS.z); FS.z=nz;
+      }
+      FS.pd=d; FS.px=m.x; FS.py=m.y; fsApply();
+    } else if(e.touches.length===1){
+      const t=e.touches[0];
+      FS.x+=t.clientX-FS.px; FS.y+=t.clientY-FS.py;
+      FS.px=t.clientX; FS.py=t.clientY; fsApply();
+    }
+  },{passive:false});
+  bd.addEventListener('touchend',e=>{ if(e.touches.length<2) FS.pd=0; },{passive:true});
+  bd.addEventListener('dblclick',()=>{ if(FS.on) fsFit(); });
+  bd.addEventListener('wheel',e=>{
+    if(!FS.on) return; e.preventDefault();
+    const r=bd.getBoundingClientRect(),cx=e.clientX-r.left,cy=e.clientY-r.top;
+    const nz=Math.max(0.08,Math.min(6,FS.z*(e.deltaY<0?1.12:0.89)));
+    FS.x=cx-(cx-FS.x)*(nz/FS.z); FS.y=cy-(cy-FS.y)*(nz/FS.z); FS.z=nz; fsApply();
+  },{passive:false});
+  window.addEventListener('keydown',e=>{ if(e.key==='Escape'&&FS.on) fsExit(); });
+  window.addEventListener('resize',()=>{ if(FS.on) setTimeout(fsFit,120); });
+  document.addEventListener('fullscreenchange',()=>{
+    if(!document.fullscreenElement&&FS.on) fsExit(); });
+})();
+
 [...document.querySelectorAll('#zoom button')].forEach(b=>b.onclick=()=>{
   const z=b.dataset.z;
-  if(z==='fit') fitZoom();
+  if(z==='fit'){ FS.on?fsFit():fitZoom(); }
+  else if(z==='fs'){ FS.on?fsExit():fsEnter(); }
+  else if(FS.on){ FS.z=Math.max(0.08,Math.min(6,FS.z*(z==='+'?1.25:0.8))); fsApply(); }
   else { G.zoom=Math.max(0.25,Math.min(3,G.zoom*(z==='+'?1.25:0.8))); applyZoom(); }
 });
 window.addEventListener('resize',()=>{ if(window.innerWidth<=760) fitZoom(); });
